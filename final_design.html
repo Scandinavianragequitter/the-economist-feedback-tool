@@ -11,9 +11,9 @@
         :root {
             --primary-red: #E3120B; 
             --header-bg: #000000;
-            --text-block-width: 550px; 
-            --sidebar-width: 450px;
             --header-height: 8rem;
+            --text-block-width: 580px; 
+            --sidebar-width: 480px;
         }
 
         body { font-family: 'Inter', sans-serif; background-color: #FFF; color: #111; margin: 0; padding: 0; overflow: hidden; }
@@ -29,36 +29,59 @@
         .stat-val { color: var(--primary-red); font-weight: 700; margin-left: 0.25rem; }
 
         /* --- LAYOUT --- */
-        #dashboard-container { padding-top: var(--header-height); height: 100vh; width: 100vw; display: grid; grid-template-columns: 10% 1fr var(--sidebar-width); overflow: hidden; }
+        #dashboard-container { 
+            padding-top: var(--header-height); 
+            height: 100vh; 
+            width: 100vw; 
+            display: grid; 
+            grid-template-columns: 8% 1fr var(--sidebar-width); 
+            overflow: hidden; 
+        }
 
         /* --- SCROLLER --- */
-        #report-scroller { height: 100%; overflow-y: auto; overflow-x: hidden; scroll-snap-type: y proximity; scroll-behavior: smooth; scrollbar-width: none; -ms-overflow-style: none; padding-right: 50px; }
+        #report-scroller { height: 100%; overflow-y: auto; scroll-snap-type: y proximity; scroll-behavior: smooth; scrollbar-width: none; -ms-overflow-style: none; }
         #report-scroller::-webkit-scrollbar { display: none; }
-
-        /* Spacers allow first/last items to center in view */
+        
         .scroll-spacer { height: 45vh; width: 100%; }
 
         .insight-card {
-            width: var(--text-block-width); margin: 0 auto 30vh auto; position: relative; padding-left: 3rem; scroll-snap-align: center;
-            opacity: 0.3; transform: scale(0.95); transition: all 0.4s ease; color: #333;
+            width: var(--text-block-width); margin: 0 auto 35vh auto; position: relative; padding-left: 3rem; scroll-snap-align: center;
+            opacity: 0.3; transform: scale(0.95); transition: all 0.4s cubic-bezier(0.2, 1, 0.3, 1); color: #333;
         }
-        .insight-card.active { opacity: 1; transform: scale(1.05); color: #000; }
+        .insight-card.active { opacity: 1; transform: scale(1.02); color: #000; }
 
         .topic-badge { font-size: 0.75rem; font-weight: 800; color: var(--primary-red); text-transform: uppercase; margin-bottom: 0.5rem; display: block; letter-spacing: 0.1em; }
-        .insight-text { font-size: 1.25rem; font-weight: 600; line-height: 1.4; }
-        .freq-label { display: block; font-size: 0.75rem; color: #888; text-transform: uppercase; font-weight: 700; margin-top: 1rem; }
+        .insight-text { font-size: 1.2rem; line-height: 1.6; text-align: justify; }
+        .insight-text b { color: #000; font-weight: 700; }
+        .freq-label { display: block; font-size: 0.7rem; color: #999; text-transform: uppercase; font-weight: 700; margin-top: 1.2rem; }
 
-        .red-dot { position: absolute; left: 0; top: 1.5rem; width: 16px; height: 16px; background-color: var(--primary-red); border-radius: 50%; transition: transform 0.4s ease; }
+        .red-dot { position: absolute; left: 0; top: 1.8rem; width: 16px; height: 16px; background-color: var(--primary-red); border-radius: 50%; transition: transform 0.4s ease; }
         .insight-card.active .red-dot { transform: scale(1.3); }
 
-        /* --- SIDEBAR --- */
-        #sidebar-container { height: 100%; padding: 2rem; opacity: 0; transform: translateX(20px); transition: all 0.3s ease; border-left: 1px solid #eee; background: #fafafa; }
+        /* --- SIDEBAR (Fixed & Scrollable) --- */
+        #sidebar-container { 
+            height: calc(100vh - var(--header-height)); 
+            padding: 2rem; 
+            opacity: 0; 
+            transform: translateX(20px); 
+            transition: all 0.3s ease; 
+            background: #FAFAFA; 
+            border-left: 1px solid #EEE;
+            overflow: hidden; /* Container doesn't scroll, content does */
+        }
         #sidebar-container.visible { opacity: 1; transform: translateX(0); }
-        #sidebar-content { height: 100%; overflow-y: auto; scrollbar-width: none; }
-        #sidebar-content::-webkit-scrollbar { display: none; }
+        
+        #sidebar-content { 
+            height: 100%; 
+            overflow-y: auto; 
+            padding-bottom: 5rem;
+            scrollbar-width: thin; 
+        }
+        #sidebar-content::-webkit-scrollbar { width: 4px; }
+        #sidebar-content::-webkit-scrollbar-thumb { background: #DDD; border-radius: 10px; }
 
-        .source-card { width: 100%; background: #FFF; border: 1px solid #ddd; padding: 1.25rem; border-radius: 8px; margin-bottom: 1.5rem; border-left: 4px solid var(--primary-red); box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-        .source-meta { display: flex; justify-content: space-between; font-size: 0.7rem; color: #999; font-weight: 700; text-transform: uppercase; margin-bottom: 0.75rem; }
+        .source-card { width: 100%; background: #FFF; border: 1px solid #DDD; padding: 1.2rem; border-radius: 8px; margin-bottom: 1.2rem; border-left: 4px solid var(--primary-red); box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+        .source-meta { display: flex; justify-content: space-between; font-size: 0.65rem; color: #999; font-weight: 700; text-transform: uppercase; margin-bottom: 0.8rem; }
     </style>
 </head>
 <body>
@@ -90,9 +113,13 @@
     </div>
 
     <script>
-        const API_BASE_URL = ""; 
         let REPORT_DATA = [];
         let observer;
+
+        // Helper to convert Markdown **bold** to HTML <b>
+        function formatMarkdown(text) {
+            return text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+        }
 
         document.addEventListener('DOMContentLoaded', async () => {
             loadSourceCounts();
@@ -130,8 +157,8 @@
                 card.innerHTML = `
                     <div class="red-dot"></div>
                     <span class="topic-badge">${item.topic}</span>
-                    <div class="insight-text">${item.insight}</div>
-                    <span class="freq-label">Found in ${item.count} comments</span>
+                    <div class="insight-text">${formatMarkdown(item.insight)}</div>
+                    <span class="freq-label">Combined from ${item.count} feedback points</span>
                 `;
                 list.appendChild(card);
             });
@@ -163,11 +190,12 @@
                 content.innerHTML = citations.map(c => `
                     <div class="source-card">
                         <div class="source-meta"><span>${c.source_platform}</span><span>${c.date}</span></div>
-                        <div class="italic text-sm">"${c.comment_text}"</div>
-                        <div class="mt-2"><a href="${c.comment_url}" target="_blank" class="text-xs text-red-600 font-bold uppercase">Source &rarr;</a></div>
+                        <div class="italic text-xs leading-relaxed">"${c.comment_text}"</div>
+                        <div class="mt-3"><a href="${c.comment_url}" target="_blank" class="text-xs text-red-600 font-bold uppercase hover:underline">Original Source &rarr;</a></div>
                     </div>
                 `).join('');
                 container.classList.add('visible');
+                content.scrollTop = 0; // Reset scroll for new citations
             }, 100);
         }
     </script>

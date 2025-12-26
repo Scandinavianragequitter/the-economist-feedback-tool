@@ -56,26 +56,37 @@ def fetch_citation_details(citation_id: str) -> Dict[str, Any]:
     return {"id": citation_id, "comment_text": "Not found", "comment_url": "#"}
 
 def parse_and_enrich_report(raw_text: str) -> List[Dict[str, Any]]:
+    # Normalize numbering if LLM added it
     if re.search(r"^\d+\.\s", raw_text, re.MULTILINE):
         raw_text = re.sub(r"^\d+\.\s*", "\n\n", raw_text, flags=re.MULTILINE)
+    
     paragraphs = [p.strip() for p in raw_text.split('\n\n') if p.strip()]
     parsed_report = []
+    
     for p in paragraphs:
-        citation_match = re.search(r"\[\[(.*?)\]\]", p)
-        if not citation_match: continue
-        full_line = p.replace(citation_match.group(0), "").strip()
-        topic, insight = "General", full_line
-        if ":" in full_line[:30]: # Split if topic: insight exists
-            parts = full_line.split(":", 1)
+        citation_matches = re.findall(r"\[\[(.*?)\]\]", p)
+        if not citation_matches: continue
+        
+        # Aggregate all IDs from potentially multiple citation brackets in one paragraph
+        all_ids = []
+        for match_str in citation_matches:
+            ids = [cid.strip() for cid in match_str.split(',') if cid.strip()]
+            all_ids.extend(ids)
+        unique_ids = sorted(list(set(all_ids)))
+
+        # Strip only the citation tags, PRESERVE bold markdown
+        clean_text = re.sub(r"\s*\[\[.*?\]\]", "", p).strip()
+        
+        topic, insight = "General", clean_text
+        if ":" in clean_text[:30]:
+            parts = clean_text.split(":", 1)
             topic, insight = parts[0].strip(), parts[1].strip()
         
-        ids_str = citation_match.group(1)
-        citation_ids = sorted(list(set([cid.strip() for cid in ids_str.split(',') if cid.strip()])))
         parsed_report.append({
             "topic": topic,
             "insight": insight,
-            "citations": [fetch_citation_details(cid) for cid in citation_ids],
-            "count": len(citation_ids)
+            "citations": [fetch_citation_details(cid) for cid in unique_ids],
+            "count": len(unique_ids)
         })
     return parsed_report
 

@@ -25,22 +25,23 @@ def process_data_with_llm(json_data):
 
     SYSTEM_INSTRUCTION = (
         "You are a Product Analyst specializing in identifying user friction. "
-        "Your goal is to extract concrete pain points and categorize them by topic.\n\n"
+        "Your goal is to synthesize user feedback into a condensed, executive-level dashboard.\n\n"
         "STRICT FORMATTING RULES:\n"
-        "1. FORMAT: Each line must follow: 'TOPIC: Single objective sentence describing the problem [[ID1, ID2]]'.\n"
-        "2. TOPICS: Decide on topics dynamically based on the data (e.g., App Stability, Audio, Pricing).\n"
-        "3. NO NUMBERING: Do not use '1.', '2.', or bullets. Start directly with the Topic.\n"
-        "4. NO BOLDING: Use plain text only.\n"
-        "5. SEPARATION: Put exactly TWO blank lines between every insight.\n"
-        "6. CONCRETE ONLY: Prioritize technical bugs or specific UX friction points."
+        "1. GROUPING: Combine all related specific feedback into a single cohesive paragraph per dynamic topic.\n"
+        "2. FORMAT: Each item must follow: 'TOPIC: Cohesive paragraph text containing all related issues [[ID1, ID2]].'\n"
+        "3. BOLDING: Use **bolding** to highlight the most critical pain points or technical bugs within the paragraph.\n"
+        "4. NO LISTS: Do not use numbering or bullet points. Use standard prose within each topic paragraph.\n"
+        "5. SEPARATION: Put exactly TWO blank lines between every Topic paragraph.\n"
+        "6. CONCISE BUT DETAILED: Be punchy. Do not suggest solutions; only describe the pain points accurately."
     )
 
     CUSTOM_PROMPT = (
-        "\n\n--- CORE TASK: CATEGORIZED PAIN POINTS ---\n"
-        "Identify the 10-15 most specific pain points. Group them by dynamic topics.\n\n"
+        "\n\n--- CORE TASK: THEMATIC PAIN POINT CONDENSING ---\n"
+        "Group all granular feedback points into themes. For each theme, write a paragraph "
+        "that captures the gist. Use bolding for the key issues.\n\n"
         "FORMAT EXAMPLE:\n"
-        "Connectivity: Login failures persist across multiple reinstall attempts [[R_123, AS_456]].\n\n\n"
-        "App Stability: Users on iPad mini devices report total app crashes [[GP_789]]."
+        "App Stability: Users on **iPad mini** devices report **total app crashes** on launch, "
+        "while others experience intermittent freezing during article transitions [[R_123, AS_456, GP_789]]."
         "\n\n--- INPUT DATA ---\n"
     )
     
@@ -70,7 +71,7 @@ def main():
     analysis = process_data_with_llm(json_data)
     with open(LLM_TEXT_OUTPUT, 'w', encoding='utf-8') as out_f:
         out_f.write(analysis)
-    print(f"✅ Categorized analysis saved to {LLM_TEXT_OUTPUT}")
+    print(f"✅ Thematic analysis saved to {LLM_TEXT_OUTPUT}")
 
 if __name__ == "__main__":
     main()
