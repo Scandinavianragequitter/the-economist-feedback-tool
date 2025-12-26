@@ -23,33 +23,32 @@ MAX_RETRIES, INITIAL_DELAY = 5, 5
 
 def process_data_with_llm(json_data):
     """
-    Sends data to OpenRouter with a prompt optimized for identifying pain points
-    without suggesting solutions or using bolding.
+    Sends data to OpenRouter with a prompt optimized for identifying pain points.
+    Forcibly prevents numbering and ensures clean paragraph separation.
     """
     if not OPENROUTER_API_KEY:
         return "Error: OPENROUTER_API_KEY environment variable not set."
 
-    # --- UPDATED PROMPT: NO BOLDING, NO SOLUTIONS, JUST PAIN POINTS ---
     SYSTEM_INSTRUCTION = (
         "You are a Product Analyst specializing in identifying user friction. "
-        "Your goal is to extract specific, concrete pain points from user feedback. "
-        "Each insight must be a single, punchy sentence describing a problem. "
-        "\n\nRULES:"
-        "\n1. NO BOLDING: Do not use asterisks (**) or any markdown formatting for emphasis."
-        "\n2. NO SOLUTIONS: Identify only the identified pain point. Do not suggest improvements."
-        "\n3. BE CONCRETE: Prioritize specific technical bugs or UX friction (e.g., 'App crashes on iPad mini') over general complaints."
-        "\n4. CITATIONS: End every sentence with its source IDs in double brackets [[ID1, ID2]]."
-        "\n5. NEUTRAL LANGUAGE: Translate emotional language into neutral business terms."
+        "Your goal is to extract specific, concrete pain points from user feedback.\n\n"
+        "STRICT FORMATTING RULES:\n"
+        "1. NO NUMBERING: Do not use '1.', '2.', or any list markers. Start sentences directly with text.\n"
+        "2. NO BOLDING: Do not use asterisks (**) or markdown formatting.\n"
+        "3. SEPARATION: You MUST put exactly TWO blank lines between every insight.\n"
+        "4. ONE SENTENCE: Each insight must be a single, punchy, objective sentence.\n"
+        "5. CITATIONS: End every sentence with its source IDs in double brackets [[ID1, ID2]].\n"
+        "6. NO SOLUTIONS: Describe only the problem, not the fix."
     )
 
     CUSTOM_PROMPT = (
         "\n\n--- CORE TASK: IDENTIFY PAIN POINTS ---\n"
-        "Analyze the following data. Identify the most frequent and specific pain points. "
+        "Analyze the input data. Identify the 10 most frequent and specific pain points. "
         "Frame each as a single objective sentence. "
-        "\n\nFORMAT EXAMPLE:\n"
-        "Users on iPad mini devices report frequent app crashes that block access entirely [[R_123, AS_456]].\n\n"
-        "Frequent interstitial ads during article transitions create significant navigation friction [[YT_abc, GP_def]].\n\n"
-        "--- INPUT DATA ---\n"
+        "\n\nFORMAT EXAMPLE (Note the double newlines):\n"
+        "Users on iPad mini devices report frequent app crashes that block access entirely [[R_123, AS_456]].\n\n\n"
+        "Interstitial ads during article transitions create significant navigation friction [[YT_abc, GP_def]]."
+        "\n\n--- INPUT DATA ---\n"
     )
     
     user_message = CUSTOM_PROMPT + json_data

@@ -82,44 +82,48 @@ def fetch_citation_details(citation_id: str) -> Dict[str, Any]:
     return {"id": citation_id, "comment_text": "Source not found", "comment_url": "#"}
 
 def parse_and_enrich_report(raw_text: str) -> List[Dict[str, Any]]:
-    parsed_report = []
-    # Split into paragraphs (one pain point per paragraph)
+    """
+    Splits the LLM output into discrete cards. 
+    Improved to handle both double-newlines and numbered lists.
+    """
+    # 1. PRE-PROCESS: If the LLM returned a numbered list, convert to double newlines
+    if re.search(r"^\d+\.\s", raw_text, re.MULTILINE):
+        raw_text = re.sub(r"^\d+\.\s*", "\n\n", raw_text, flags=re.MULTILINE)
+
     paragraphs = [p.strip() for p in raw_text.split('\n\n') if p.strip()]
+    parsed_report = []
 
     for p in paragraphs:
-        # Match [[ID1, ID2]]
-        citation_match = re.search(r"\[\[(.*?)\]\]", p)
+        # Find all citation blocks [[ID1, ID2]]
+        citation_matches = re.findall(r"\[\[(.*?)\]\]", p)
         
-        insight_text = p
-        citations_data = []
-        count = 0
+        all_ids = []
+        for match in citation_matches:
+            ids = [cid.strip() for cid in match.split(',') if cid.strip()]
+            all_ids.extend(ids)
+        
+        # UNIQUE COUNT for quantitative data
+        unique_ids = sorted(list(set(all_ids)))
+        
+        # CLEAN: Remove ALL [[...]] blocks from the text shown on scroller cards
+        clean_insight = re.sub(r"\[\[.*?\]\]", "", p).strip()
+        
+        # FINAL CHECK: Don't add cards that contain no text
+        if not clean_insight or len(clean_insight) < 5:
+            continue
 
-        if citation_match:
-            # Strip citation from text
-            insight_text = p.replace(citation_match.group(0), "").strip()
-            # Remove any trailing numbers like "15." if present (optional safety)
-            insight_text = re.sub(r"^\d+\.\s*", "", insight_text)
-            
-            ids_str = citation_match.group(1)
-            citation_ids = [cid.strip() for cid in ids_str.split(',') if cid.strip()]
-            
-            # UNIQUE COUNT for quantitative data
-            unique_ids = sorted(list(set(citation_ids)))
-            count = len(unique_ids)
-            
-            for cid in unique_ids:
-                citations_data.append(fetch_citation_details(cid))
+        citations_data = [fetch_citation_details(cid) for cid in unique_ids]
 
         parsed_report.append({
-            "insight": insight_text,
+            "insight": clean_insight,
             "citations": citations_data,
-            "count": count # ADDED: Quantitative frequency
+            "count": len(unique_ids)
         })
 
     return parsed_report
 
 def main():
-    print("--- Starting Report Generator ---")
+    print("--- Starting Hardened Report Generator ---")
     if not os.path.exists(INPUT_FILE_PATH):
         print(f"❌ Error: {INPUT_FILE_PATH} not found.")
         return
