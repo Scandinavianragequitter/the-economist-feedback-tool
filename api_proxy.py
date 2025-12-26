@@ -17,7 +17,7 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # --- Configuration ---
-# PERSISTENCE FIX: Use the Render mount path if available, else local 'data'
+# PERSISTENCE FIX: This must match the mount path in render.yaml
 DATA_DIR = os.environ.get("PERSISTENT_STORAGE_PATH", "data")
 # CREDENTIALS: Use environment variable directly for security
 API_KEY = os.environ.get("OPENROUTER_API_KEY") 
@@ -105,6 +105,7 @@ def fetch_entire_dataset() -> List[Dict]:
     """Aggregates text data from all connected platform databases."""
     all_data = []
     for platform, config in DB_SCHEMAS.items():
+        if not os.path.exists(config['db']): continue
         conn = get_db_connection(config['db'])
         if not conn: continue
         try:
@@ -207,7 +208,6 @@ def format_row(plat, row, conn):
 # ====================================================================
 
 app = Flask(__name__)
-# Update CORS for production security if needed
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 @app.route('/')
@@ -217,8 +217,8 @@ def index():
 
 @app.route('/report_with_sources.json')
 def serve_report():
-    """Serves the pre-generated report JSON file."""
-    return send_from_directory('.', 'report_with_sources.json')
+    """Serves the pre-generated report JSON file from the PERSISTENT data directory."""
+    return send_from_directory(DATA_DIR, 'report_with_sources.json')
 
 @app.route('/api/context_metadata', methods=['GET'])
 def get_context_metadata():
@@ -261,14 +261,23 @@ def source_counts():
     key_mapping = {"Reddit": "Reddit", "YouTube": "YouTube", "AppStore": "iOS", "GooglePlay": "GP"}
     counts = {}
     for key, config in DB_SCHEMAS.items():
+        platform_key = key_mapping.get(key, key)
+        if not os.path.exists(config['db']):
+            counts[platform_key] = 0
+            continue
         conn = get_db_connection(config['db'])
         if conn:
             try:
                 cur = conn.cursor()
                 cur.execute(f"SELECT COUNT(*) FROM {config['table']}")
-                counts[key_mapping.get(key, key)] = cur.fetchone()[0]
+                counts[platform_key] = cur.fetchone()[0]
+            except Exception as e:
+                logging.error(f"Error counting {key}: {e}")
+                counts[platform_key] = 0
             finally:
                 conn.close()
+        else:
+            counts[platform_key] = 0
     return jsonify(counts)
 
 @app.route('/api/get_comment_details', methods=['POST']) 
