@@ -5,10 +5,10 @@ import os
 from typing import List, Dict, Any, Optional
 
 # ==============================================================================
-# CONFIGURATION - UPDATED TO USE RELATIVE PATHS FOR PORTABILITY
+# CONFIGURATION - UPDATED FOR RENDER PERSISTENT DISK
 # ==============================================================================
-# This looks for the 'data' folder in the project directory
-DATA_DIR = "data"
+# Use the Render mount path if available, otherwise fallback to local 'data'
+DATA_DIR = os.environ.get("PERSISTENT_STORAGE_PATH", "data")
 
 REDDIT_DB = os.path.join(DATA_DIR, "reddit_data.db")
 YOUTUBE_DB = os.path.join(DATA_DIR, "youtube_comments.db")
@@ -22,6 +22,7 @@ APP_REVIEW_LIMIT = 500
 GP_REVIEW_LIMIT = 500 
 
 # --- Output Configuration ---
+# Ensure curated output is also saved to the persistent disk
 OUTPUT_FILENAME = os.path.join(DATA_DIR, "curated_data_for_llm.json") 
 # ==============================================================================
 
@@ -91,13 +92,17 @@ def get_google_play_reviews(conn: Optional[sqlite3.Connection]) -> List[Dict[str
 
 def main():
     print("--- Starting Final Curation Pipeline ---")
+    
+    # Ensure data directory exists
+    os.makedirs(DATA_DIR, exist_ok=True)
+    
     reddit_conn = connect_db(REDDIT_DB)
     youtube_conn = connect_db(YOUTUBE_DB)
     app_store_conn = connect_db(APP_STORE_DB)
     google_play_conn = connect_db(GOOGLE_PLAY_DB)
     
     if not any([reddit_conn, youtube_conn, app_store_conn, google_play_conn]):
-        print("❌ FATAL: No database files were found in the 'data/' folder.")
+        print(f"❌ FATAL: No database files were found in the storage folder: {DATA_DIR}")
         sys.exit(1)
 
     all_data_for_llm = (get_top_reddit_data(reddit_conn) + 
