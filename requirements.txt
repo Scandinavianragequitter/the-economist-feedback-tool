@@ -8,11 +8,13 @@ whitenoise
 
 # Scrapers & Curation
 praw
+google-api-python-client
 google-play-scraper
 app-store-web-scraper
 pandas
 sqlalchemy
 psycopg2-binary
+tabulate
 
 # Analysis
 openai
