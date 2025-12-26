@@ -31,7 +31,9 @@ def process_data_with_llm(json_data):
 
     SYSTEM_INSTRUCTION = (
         "You are a Product Analyst specializing in identifying user friction. "
-        "Your goal is to extract specific, concrete pain points from user feedback.\n\n"
+        "Your goal is to extract specific, concrete pain points from user feedback."
+        "Example topics could be app-related technical issues, suggestions for improvement, reactions to new products or editorial. \n\n"
+
         "STRICT FORMATTING RULES:\n"
         "1. NO NUMBERING: Do not use '1.', '2.', or any list markers. Start sentences directly with text.\n"
         "2. NO BOLDING: Do not use asterisks (**) or markdown formatting.\n"
@@ -43,11 +45,8 @@ def process_data_with_llm(json_data):
 
     CUSTOM_PROMPT = (
         "\n\n--- CORE TASK: IDENTIFY PAIN POINTS ---\n"
-        "Analyze the input data. Identify the 10 most frequent and specific pain points. "
+        "Analyze the input data. Identify up to 20 frequent and specific pain points. "
         "Frame each as a single objective sentence. "
-        "\n\nFORMAT EXAMPLE (Note the double newlines):\n"
-        "Users on iPad mini devices report frequent app crashes that block access entirely [[R_123, AS_456]].\n\n\n"
-        "Interstitial ads during article transitions create significant navigation friction [[YT_abc, GP_def]]."
         "\n\n--- INPUT DATA ---\n"
     )
     
