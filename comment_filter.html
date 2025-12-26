@@ -10,7 +10,6 @@
     
     <style>
         :root {
-            /* COLORS */
             --primary-red: #E3120B; 
             --bg-white: #FFFFFF;
             --text-black: #111111;
@@ -20,7 +19,7 @@
 
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6; /* Light gray background for search area */
+            background-color: #f3f4f6; 
             color: var(--text-black);
             margin: 0;
             padding: 0;
@@ -30,7 +29,6 @@
             overflow: hidden;
         }
 
-        /* --- HEADER (Settings Area) --- */
         #main-header {
             background-color: var(--header-bg);
             color: var(--header-text);
@@ -74,7 +72,6 @@
             font-size: 0.85rem;
         }
         
-        /* Platform Exclusion Buttons */
         .platform-options {
             display: flex;
             gap: 1rem;
@@ -93,12 +90,11 @@
         }
         .platform-label span { margin-left: 0.4rem; }
 
-        /* --- RESULTS AREA --- */
         #results-container {
             flex-grow: 1;
             overflow-y: auto;
             padding: 2rem;
-            padding-bottom: 10rem; /* Space for fixed bottom bar */
+            padding-bottom: 10rem; 
             max-width: 900px; 
             margin: 0 auto;
             width: 100%;
@@ -139,7 +135,6 @@
             line-height: 1.6;
         }
 
-        /* --- BOTTOM INPUT BAR --- */
         #bottom-bar {
             position: fixed;
             bottom: 0;
@@ -328,7 +323,6 @@
     </div>
 
     <script>
-        // PRODUCTION FIX: Relative path for Render environment
         const API_BASE_URL = ""; 
         const NL2SQL_API_ENDPOINT = API_BASE_URL + "/api/nl_sql_search"; 
         
@@ -367,7 +361,6 @@
             }
         }
 
-        // HELPER: Collects values of checked platform boxes
         function getSelectedPlatforms() {
             const checkboxes = document.querySelectorAll('input[name="platform"]:checked');
             return Array.from(checkboxes).map(cb => cb.value);
@@ -384,7 +377,7 @@
             const comments = results.results || results.comments || results;
 
             if (!comments || comments.length === 0) {
-                list.innerHTML = '<p class="text-center text-gray-500 italic mt-10">No matching comments found.</p>';
+                list.innerHTML = '<p class="text-center text-gray-500 italic mt-10">No matching comments found for the selected time frame.</p>';
                 status.textContent = "0 results";
                 return;
             }
@@ -415,16 +408,18 @@
 
         async function applyFilter() {
             const customPrompt = document.getElementById('custom-prompt').value.trim();
+            const timePeriod = document.getElementById('time-period').value;
+            const platforms = getSelectedPlatforms();
             
             if (!customPrompt) {
                 alert("Please enter a search query.");
                 return;
             }
 
-            // ATTACHMENT: Captured platforms are sent in the JSON payload
             const payload = { 
                 nl_prompt: customPrompt,
-                platforms: getSelectedPlatforms() 
+                time_period: timePeriod,
+                platforms: platforms
             };
             
             showLoading(true);

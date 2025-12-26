@@ -4,6 +4,7 @@ import requests
 import sqlite3
 import re
 import datetime
+import time
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS 
 from typing import Optional, List, Dict, Any 
@@ -17,14 +18,11 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # --- Configuration ---
-# PERSISTENCE: This must match the mount path in render.yaml
 DATA_DIR = os.environ.get("PERSISTENT_STORAGE_PATH", "data")
-# CREDENTIALS: Using environment variable injected by Render
 API_KEY = os.environ.get("OPENROUTER_API_KEY") 
 LARGE_CONTEXT_MODEL = "x-ai/grok-4.1-fast" 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
-# Ensure the data directory exists on the persistent disk
 os.makedirs(DATA_DIR, exist_ok=True)
 
 # --- Database Paths ---
@@ -40,6 +38,7 @@ DB_SCHEMAS = {
         "table": "reddit_comments",
         "text_col": "body",
         "id_col_db": "comment_id",
+        "date_col": "created_utc",
         "prefix": "R_",
     },
     "YouTube": {
@@ -47,6 +46,7 @@ DB_SCHEMAS = {
         "table": "youtube_comments",
         "text_col": "text_display",
         "id_col_db": "comment_id",
+        "date_col": "published_at",
         "prefix": "YT_",
     },
     "AppStore": {
@@ -54,6 +54,7 @@ DB_SCHEMAS = {
         "table": "economist_reviews",
         "text_col": '"Review Text"',
         "id_col_db": '"Review ID"',
+        "date_col": '"Review Date"',
         "prefix": "AS_",
     },
     "GooglePlay": {
@@ -61,6 +62,7 @@ DB_SCHEMAS = {
         "table": "google_play_reviews",
         "text_col": "review_text",
         "id_col_db": "review_id",
+        "date_col": "review_date",
         "prefix": "GP_",
     },
 }
@@ -70,7 +72,6 @@ DB_SCHEMAS = {
 # ====================================================================
 
 def get_db_connection(db_path):
-    """Establishes a connection to the specified SQLite database."""
     try:
         conn = sqlite3.connect(db_path)
         conn.row_factory = sqlite3.Row
@@ -80,58 +81,69 @@ def get_db_connection(db_path):
         return None
 
 def call_llm_api_large_context(messages: List[Dict], model: str) -> Optional[str]:
-    """Calls the OpenRouter LLM API with the provided messages and model."""
     headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
-    payload = {
-        "model": model,
-        "messages": messages,
-        "temperature": 0.0,
-        "top_p": 1,
-    }
+    payload = {"model": model, "messages": messages, "temperature": 0.0, "top_p": 1}
     try:
         response = requests.post(OPENROUTER_URL, headers=headers, json=payload, timeout=180)
         response.raise_for_status()
         content = response.json()['choices'][0]['message']['content']
-        # Clean reasoning tokens if present
         content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL).strip()
-        # Clean markdown code blocks if present
         content = content.replace('```json', '').replace('```', '').strip()
         return content
     except Exception as e:
         logging.error(f"❌ LLM API Error: {e}")
         return None
 
-def fetch_entire_dataset(platforms: Optional[List[str]] = None) -> List[Dict]:
+def fetch_entire_dataset(platforms: Optional[List[str]] = None, time_period: str = "all") -> List[Dict]:
     """
-    Aggregates text data from the specified databases. 
-    If no platforms are provided, it scans everything.
+    Aggregates text data with platform and time-frame filtering.
     """
     all_data = []
-    # If the user selected specific platforms, filter our loop
     target_platforms = platforms if platforms else list(DB_SCHEMAS.keys())
+    
+    # Calculate cutoff
+    now = datetime.datetime.now(datetime.timezone.utc)
+    cutoff_dt = None
+    if time_period == "day": cutoff_dt = now - datetime.timedelta(days=1)
+    elif time_period == "week": cutoff_dt = now - datetime.timedelta(days=7)
+    elif time_period == "month": cutoff_dt = now - datetime.timedelta(days=30)
 
     for platform in target_platforms:
-        if platform not in DB_SCHEMAS:
-            continue
-            
+        if platform not in DB_SCHEMAS: continue
         config = DB_SCHEMAS[platform]
-        if not os.path.exists(config['db']): 
-            continue
-            
+        if not os.path.exists(config['db']): continue
+        
         conn = get_db_connection(config['db'])
-        if not conn: 
-            continue
-            
+        if not conn: continue
+        
         try:
-            query = f"SELECT {config['id_col_db']} as id, {config['text_col']} as text FROM {config['table']} WHERE text IS NOT NULL AND text != ''"
+            query = f"SELECT {config['id_col_db']} as id, {config['text_col']} as text, {config['date_col']} as date FROM {config['table']} WHERE text IS NOT NULL AND text != ''"
             cursor = conn.cursor()
             cursor.execute(query)
-            rows = cursor.fetchall()
-            for row in rows:
-                all_data.append({
-                    "id": f"{config['prefix']}{row['id']}",
-                    "t": row['text'][:1000] # Truncate for prompt efficiency
-                })
+            
+            for row in cursor.fetchall():
+                row_date = row['date']
+                is_valid = True
+                
+                # Apply Time Filtering
+                if cutoff_dt:
+                    try:
+                        if platform == "Reddit":
+                            # Reddit uses Unix Timestamps
+                            dt = datetime.datetime.fromtimestamp(float(row_date), tz=datetime.timezone.utc)
+                        else:
+                            # Others use ISO strings
+                            dt = datetime.datetime.fromisoformat(str(row_date).replace('Z', '+00:00'))
+                        
+                        if dt < cutoff_dt: is_valid = False
+                    except Exception:
+                        pass # If date parsing fails, keep the record
+                
+                if is_valid:
+                    all_data.append({
+                        "id": f"{config['prefix']}{row['id']}",
+                        "t": str(row['text'])[:1000]
+                    })
         except Exception as e:
             logging.warning(f"Error reading {platform}: {e}")
         finally:
@@ -139,7 +151,6 @@ def fetch_entire_dataset(platforms: Optional[List[str]] = None) -> List[Dict]:
     return all_data
 
 def llm_scan_full_dataset(user_prompt: str, dataset: List[Dict]) -> List[str]:
-    """Uses the LLM to identify relevant comment IDs based on a semantic query."""
     data_str = "\n".join([f"{d['id']}|{d['t']}" for d in dataset])
     system_prompt = (
         "You are a Semantic Search Engine. "
@@ -157,11 +168,9 @@ def llm_scan_full_dataset(user_prompt: str, dataset: List[Dict]) -> List[str]:
     try:
         return json.loads(response)
     except:
-        # Fallback regex if JSON parsing fails
         return re.findall(r'(R_|YT_|AS_|GP_)[a-zA-Z0-9_\-\.:]+', response)
 
 def fetch_details_for_ids(relevant_ids: List[str]) -> List[Dict]:
-    """Retrieves full metadata for a specific list of citation IDs."""
     results = []
     ids_by_plat = {"Reddit": [], "YouTube": [], "AppStore": [], "GooglePlay": []}
     for rid in relevant_ids:
@@ -190,7 +199,6 @@ def fetch_details_for_ids(relevant_ids: List[str]) -> List[Dict]:
     return results
 
 def format_row(plat, row, conn):
-    """Standardizes row data and constructs direct platform links."""
     text, date, url, meta = "", "", "#", ""
     if plat == "Reddit":
         text = row.get('body', '')
@@ -198,14 +206,12 @@ def format_row(plat, row, conn):
         try:
             p = conn.execute("SELECT title FROM reddit_posts WHERE post_id=?", (row.get('post_id'),)).fetchone()
             if p: 
-                # Direct link to the Reddit comment
                 url = f"https://www.reddit.com/comments/{row.get('post_id')}/_/{row.get('comment_id')}/"
                 meta = p['title']
         except: pass
     elif plat == "YouTube":
         text = row.get('text_display', '')
         date = row.get('published_at', '')
-        # Direct link to YouTube comment
         url = f"https://youtube.com/watch?v={row.get('video_id','')}&lc={row.get('comment_id','')}"
     elif plat == "AppStore":
         text = row.get('Review Text', '')
@@ -226,50 +232,40 @@ CORS(app, resources={r"/*": {"origins": "*"}})
 
 @app.route('/')
 def index():
-    """Serves the main report dashboard."""
     return send_from_directory('.', 'final_design.html')
 
 @app.route('/<path:filename>')
 def serve_static_html(filename):
-    """Serves subpages like question.html, comment_filter.html, etc."""
     if filename.endswith(".html"):
         return send_from_directory('.', filename)
     return jsonify({"error": "File not found"}), 404
 
 @app.route('/report_with_sources.json')
 def serve_report():
-    """Serves the pre-generated report JSON file from the PERSISTENT storage directory."""
     return send_from_directory(DATA_DIR, 'report_with_sources.json')
 
 @app.route('/api/nl_sql_search', methods=['POST'])
 def nl_sql_search():
-    """
-    FIX: Now extracts the 'platforms' list from the user request
-    to exclude data sources during the LLM scan.
-    """
     data = request.get_json()
     nl_prompt = data.get('nl_prompt', '').strip()
-    platforms = data.get('platforms', []) # Get the user's exclusion list
+    platforms = data.get('platforms', [])
+    time_period = data.get('time_period', 'all')
 
-    if not nl_prompt: 
-        return jsonify({"error": "No prompt"}), 400
+    if not nl_prompt: return jsonify({"error": "No prompt"}), 400
         
-    # Only fetch data for selected platforms
-    full_dataset = fetch_entire_dataset(platforms=platforms)
+    full_dataset = fetch_entire_dataset(platforms=platforms, time_period=time_period)
     
     if not full_dataset: 
-        return jsonify({"results": [], "msg": "Selected databases are empty or not found."})
+        return jsonify({"results": [], "msg": "No data found for the selected time frame."})
         
     relevant_ids = llm_scan_full_dataset(nl_prompt, full_dataset)
-    if not relevant_ids: 
-        return jsonify({"results": []})
+    if not relevant_ids: return jsonify({"results": []})
         
     final_results = fetch_details_for_ids(relevant_ids)
     return jsonify({"results": final_results})
 
 @app.route('/api/source_counts', methods=['GET'])
 def source_counts():
-    """Returns record counts for each platform for visualization."""
     key_mapping = {"Reddit": "Reddit", "YouTube": "YouTube", "AppStore": "iOS", "GooglePlay": "GP"}
     counts = {}
     for key, config in DB_SCHEMAS.items():
@@ -284,12 +280,9 @@ def source_counts():
                 cur.execute(f"SELECT COUNT(*) FROM {config['table']}")
                 counts[platform_key] = cur.fetchone()[0]
             except Exception as e:
-                logging.error(f"Error counting {key}: {e}")
                 counts[platform_key] = 0
-            finally:
-                conn.close()
-        else:
-            counts[platform_key] = 0
+            finally: conn.close()
+        else: counts[platform_key] = 0
     return jsonify(counts)
 
 if __name__ == '__main__':
