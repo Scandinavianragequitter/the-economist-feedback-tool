@@ -86,7 +86,7 @@
             font-size: 0.85rem;
             color: #888;
         }
-        /* REMOVED custom #stats-description style */
+        
         .stat-val { color: var(--primary-red); font-weight: 700; margin-left: 0.25rem; }
 
         /* --- MAIN LAYOUT --- */
@@ -95,7 +95,6 @@
             height: 100vh;
             width: 100vw;
             display: grid;
-            /* 15% Spacer | 800px Report | 1fr Sidebar */
             grid-template-columns: 15% var(--column-width) 1fr;
             gap: 0; 
             overflow: hidden;
@@ -107,19 +106,13 @@
             height: 100%;
             overflow-y: auto;
             overflow-x: hidden; 
-            
             scroll-snap-type: y mandatory; 
             scroll-behavior: smooth;
-            
             -ms-overflow-style: none;  
             scrollbar-width: none; 
-            
-            /* Vertical Alignment Logic (Same as before) */
             padding-top: calc(50vh - 4rem - 100px); 
             padding-bottom: calc(50vh - 4rem - 100px);
-            
             padding-right: 150px; 
-            
             position: relative;
             z-index: 50; 
         }
@@ -130,16 +123,12 @@
             width: var(--text-block-width);
             margin-left: 2rem; 
             margin-bottom: 35vh; 
-            
             position: relative;
             padding-left: 3rem; 
-            
             scroll-snap-align: center;
-            
             opacity: 0.4;
             transform: scale(0.95); 
             transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1); 
-            
             font-size: 1.15rem;
             line-height: 1.7;
             text-align: justify; 
@@ -170,45 +159,19 @@
         
         .insight-card.active .red-dot {
             transform: translateY(-50%) scale(1.3); 
-            
-        }
-
-        /* Connector Curves - (CSS kept for reference, but elements won't be created) */
-        .connector-curve {
-            position: absolute;
-            right: -100px; 
-            top: 50%;
-            transform: translateY(-50%);
-            width: 60px;
-            height: 140px;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.4s ease 0.1s;
-            z-index: 55; 
-        }
-        
-        .insight-card.active .connector-curve {
-            opacity: 1;
         }
 
         /* --- SIDEBAR (Right) --- */
         #sidebar-container {
-            /* [FIXED VERTICAL ALIGNMENT] 
-               Removed manual padding-top.
-               Using Flexbox to perfectly center content vertically.
-            */
-            height: 100%; /* Fill the column height */
+            height: 100%; 
             display: flex;
             flex-direction: column;
-            justify-content: center; /* CENTERS CONTENT VERTICALLY */
-            
+            justify-content: center; 
             padding-left: 1rem; 
             padding-right: 3rem;
-            
             opacity: 0;
             transform: translateX(10px);
             transition: opacity 0.3s ease, transform 0.3s ease;
-            
             z-index: 10; 
         }
 
@@ -218,7 +181,6 @@
         }
         
         #sidebar-content {
-             /* Limit height to keep it centered and readable */
              max-height: 70vh;
              overflow-y: auto;
              padding: 10px; 
@@ -296,26 +258,22 @@
     </header>
 
     <div id="dashboard-container">
-        
         <div></div>
-
         <div id="report-scroller">
             <div id="insights-list">
                 <p class="text-center text-gray-400 mt-20">Loading insights...</p>
             </div>
         </div>
-
         <div id="sidebar-container">
-            
             <div id="sidebar-content"></div>
         </div>
-
     </div>
 
     <script>
-        const API_BASE_URL = "http://127.0.0.1:5000"; 
-        const REPORT_ENDPOINT = "report_with_sources.json";
-        const COUNT_ENDPOINT = API_BASE_URL + "/api/source_counts";
+        // PRODUCTION FIX: Use relative paths so it works on Render
+        const API_BASE_URL = ""; 
+        const REPORT_ENDPOINT = "/report_with_sources.json";
+        const COUNT_ENDPOINT = "/api/source_counts";
         
         let REPORT_DATA = [];
         let observer;
@@ -338,16 +296,12 @@
 
         function isCommentSaved(commentText) {
             const saved = getSavedComments();
-            // Use comment text as the key for uniqueness, stripping quotes added in HTML
             return saved.hasOwnProperty(commentText.trim().replace(/^"|"$/g, ''));
         }
 
         function getBookmarkIconHtml(citation) {
-            // Text to be used as key in local storage (must match the displayed text)
             const commentText = citation.comment_text.trim();
             const isSaved = isCommentSaved(commentText);
-            
-            // Build a small, robust object to save
             const commentData = {
                 text: commentText,
                 url: citation.comment_url,
@@ -355,15 +309,12 @@
                 date: citation.date,
                 id: citation.id
             };
-            // Stringify and escape for safe use in onclick attribute
             const dataStr = JSON.stringify(commentData).replace(/'/g, '&#39;'); 
 
-            // Dynamic styling based on save state
             const iconColor = isSaved ? 'var(--primary-red)' : 'grey';
             const iconFill = isSaved ? 'var(--primary-red)' : 'none';
             const titleText = isSaved ? 'Remove from saved' : 'Save this comment';
 
-            // Use inline styles to adjust the bookmark button size and position relative to the text
             return `
                 <button onclick='toggleSaveComment(${dataStr}); event.stopPropagation();' 
                         class="nav-icon-btn p-1 transition duration-200" title="${titleText}" style="transform: scale(0.7); margin-right: -10px;">
@@ -382,7 +333,6 @@
             if (textElement && bookmarkIcon) {
                 const cardText = textElement.textContent.trim().replace(/^"|"$/g, '');
                 const isSaved = isCommentSaved(cardText);
-                
                 const iconColor = isSaved ? 'var(--primary-red)' : 'grey';
                 const iconFill = isSaved ? 'var(--primary-red)' : 'none';
                 const titleText = isSaved ? 'Remove from saved' : 'Save this comment';
@@ -394,7 +344,6 @@
         }
 
         function updateAllBookmarkIcons() {
-            // Give it a small delay for DOM rendering
             setTimeout(() => {
                 document.querySelectorAll('.source-card').forEach(updateBookmarkIconInCard);
             }, 50);
@@ -402,21 +351,17 @@
 
         function toggleSaveComment(commentData) {
             let saved = getSavedComments();
-            const key = commentData.text; // Use comment text as the key
-
+            const key = commentData.text; 
             if (saved.hasOwnProperty(key)) {
-                // Remove comment
                 delete saved[key];
             } else {
-                // Add comment
                 saved[key] = commentData;
             }
-            
             saveComments(saved);
-            updateAllBookmarkIcons(); // Refresh all visible icons
+            updateAllBookmarkIcons();
         }
 
-        // --- CORE DASHBOARD LOGIC (Original) ---
+        // --- CORE DASHBOARD LOGIC ---
 
         async function loadSourceCounts() {
             try {
@@ -450,32 +395,16 @@
                 const card = document.createElement('div');
                 card.className = 'insight-card';
                 card.dataset.index = index; 
-                
                 const dot = document.createElement('div');
                 dot.className = 'red-dot';
-                
-                /* --- CURVE GENERATION DEACTIVATED ---
-                const curves = document.createElement('div');
-                curves.className = 'connector-curve';
-                curves.innerHTML = `
-                    <svg width="60" height="140" viewBox="0 0 60 140" fill="none">
-                        <path d="M0 20 Q 30 20 50 0" stroke="#E3120B" stroke-width="2" stroke-linecap="round" />
-                        <path d="M0 120 Q 30 120 50 140" stroke="#E3120B" stroke-width="2" stroke-linecap="round" />
-                    </svg>
-                `;
-                */
-
                 const text = document.createElement('div');
                 text.textContent = item.insight; 
-                
                 card.appendChild(dot);
-                // card.appendChild(curves); // Not appending curves
                 card.appendChild(text);
                 container.appendChild(card);
             });
 
             initObserver();
-            
             setTimeout(() => {
                 const firstCard = document.querySelector('.insight-card');
                 if (firstCard) setActiveInsight(firstCard);
@@ -485,13 +414,11 @@
         function initObserver() {
             const scroller = document.getElementById('report-scroller');
             const cards = document.querySelectorAll('.insight-card');
-
             const options = {
                 root: scroller,
                 rootMargin: '-50% 0px -50% 0px', 
                 threshold: 0.0 
             };
-
             observer = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
                     if (entry.isIntersecting) {
@@ -501,14 +428,12 @@
                     }
                 });
             }, options);
-
             cards.forEach(card => observer.observe(card));
         }
 
         function setActiveInsight(card) {
             document.querySelectorAll('.insight-card').forEach(c => c.classList.remove('active'));
             card.classList.add('active');
-
             const index = card.dataset.index;
             const data = REPORT_DATA[index];
             updateSidebar(data ? data.citations : []);
@@ -517,25 +442,17 @@
         function updateSidebar(citations) {
             const sidebar = document.getElementById('sidebar-container');
             const content = document.getElementById('sidebar-content');
-            
             sidebar.classList.remove('visible');
-            
             setTimeout(() => {
                 content.innerHTML = '';
-                
                 if (!citations || citations.length === 0) {
                     content.innerHTML = '<p class="text-gray-300 italic text-sm">No direct citations linked.</p>';
                 } else {
                     citations.forEach(c => {
                         let platformName = c.source_platform;
                         if(platformName === 'App Store') platformName = 'iOS';
-                        if(platformName === 'Google Play') platformName = 'Google Play';
-                        
                         const dateStr = c.date ? c.date.split(' ')[0] : 'Recent';
-                        
-                        // NEW: Generate bookmark icon HTML
                         const bookmarkHtml = getBookmarkIconHtml(c);
-
                         const html = `
                             <div class="source-card">
                                 <div class="source-meta">
@@ -554,9 +471,8 @@
                         content.innerHTML += html;
                     });
                 }
-                
                 sidebar.classList.add('visible');
-                updateAllBookmarkIcons(); // NEW: Update icons after rendering
+                updateAllBookmarkIcons(); 
             }, 150); 
         }
 

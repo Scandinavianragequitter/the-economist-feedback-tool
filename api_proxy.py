@@ -207,12 +207,13 @@ def format_row(plat, row, conn):
 # ====================================================================
 
 app = Flask(__name__)
+# Update CORS for production security if needed
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 @app.route('/')
 def index():
-    """Serves the main report dashboard."""
-    return send_from_directory('.', 'report_viewer.html')
+    """Serves the main report dashboard (Updated to final_design.html)."""
+    return send_from_directory('.', 'final_design.html')
 
 @app.route('/report_with_sources.json')
 def serve_report():
