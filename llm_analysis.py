@@ -2,9 +2,9 @@ import requests
 import sys
 import os
 import time
+import re
 
 # --- PERSISTENCE & CONFIG ---
-# Use the Render mount path if available, otherwise fallback to local 'data'
 DATA_DIR = os.environ.get("PERSISTENT_STORAGE_PATH", "data")
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY")
 
@@ -15,16 +15,13 @@ except ImportError:
     MODEL_NAME = "tngtech/deepseek-r1t2-chimera:free"
     HTTP_REFERER = "https://github.com/scandinavianragequitter/economist-feedback"
 
-# FIX: Use absolute paths in the persistent disk
+# Absolute paths for Render Persistent Disk
 INPUT_JSON_FILE = os.path.join(DATA_DIR, "curated_data_for_llm.json") 
 LLM_TEXT_OUTPUT = os.path.join(DATA_DIR, "llm_analysis_output.txt")
 
 MAX_RETRIES, INITIAL_DELAY = 5, 5
 
 def process_data_with_llm(json_data):
-    """
-    Sends data to OpenRouter with the EXACT prompt that was working perfectly.
-    """
     if not OPENROUTER_API_KEY:
         return "Error: OPENROUTER_API_KEY environment variable not set."
 
@@ -71,11 +68,8 @@ def process_data_with_llm(json_data):
             response = requests.post(OPENROUTER_API_URL, headers=headers, json=payload, timeout=300)
             response.raise_for_status()
             content = response.json()['choices'][0]['message']['content'].strip()
-            
-            # Remove thinking tags if present
-            import re
+            # Remove DeepSeek thinking tags
             content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL).strip()
-            
             return content
         except Exception as e:
             if attempt < MAX_RETRIES - 1:

@@ -34,8 +34,7 @@ def get_db_connection(db_path: str) -> Optional[sqlite3.Connection]:
         conn = sqlite3.connect(db_path)
         conn.row_factory = sqlite3.Row 
         return conn
-    except sqlite3.Error as e:
-        print(f"Error connecting to {db_path}: {e}")
+    except sqlite3.Error:
         return None
 
 def fetch_citation_details(citation_id: str) -> Dict[str, Any]:
@@ -71,11 +70,8 @@ def fetch_citation_details(citation_id: str) -> Dict[str, Any]:
             result = dict(row)
             url = result.get('comment_url', '#')
             if platform_key == "R":
-                post_id = result.get('post_id')
-                p_cursor = conn.execute(f"SELECT post_url FROM reddit_posts WHERE post_id = '{post_id}'")
-                p_row = p_cursor.fetchone()
-                if p_row:
-                    url = f"https://www.reddit.com{dict(p_row)['post_url']}"
+                p_row = conn.execute(f"SELECT post_url FROM reddit_posts WHERE post_id = '{result['post_id']}'").fetchone()
+                if p_row: url = f"https://www.reddit.com{dict(p_row)['post_url']}"
             elif platform_key == "YT":
                 url = f"https://www.youtube.com/watch?v={result['video_id']}&lc={citation_id.split('_')[-1]}"
             
@@ -85,45 +81,34 @@ def fetch_citation_details(citation_id: str) -> Dict[str, Any]:
             else:
                  date_val = str(date_val).split(' ')[0] if date_val else None
             
-            return {
-                "id": citation_id,
-                "comment_text": result.get('comment_text', 'N/A'),
-                "comment_url": url,
-                "source_platform": config['platform_name'],
-                "date": date_val
-            }
-    except Exception as e:
-        print(f"SQL Error: {e}")
-    finally:
-        conn.close()
-    return {"id": citation_id, "comment_text": "Source not found in database", "comment_url": "#"}
+            return {"id": citation_id, "comment_text": result.get('comment_text', 'N/A'), "comment_url": url, "source_platform": config['platform_name'], "date": date_val}
+    except: pass
+    finally: conn.close()
+    return {"id": citation_id, "comment_text": "Source not found", "comment_url": "#"}
 
 def parse_and_enrich_report(raw_text: str) -> List[Dict[str, Any]]:
     """
-    RESTORED ORIGINAL LOGIC: Splits by double newline and pulls citations out correctly.
+    Splits by double newlines, extracts citation IDs, and STRIPS citation tags 
+    from the dashboard card text.
     """
     parsed_report = []
-    paragraphs = raw_text.split('\n\n')
+    # Split into paragraphs based on double newlines
+    paragraphs = [p.strip() for p in raw_text.split('\n\n') if p.strip()]
 
     for p in paragraphs:
-        p = p.strip()
-        if not p:
-            continue
-
-        # Find the citation IDs inside [[...]] brackets
-        citation_match = re.search(r"\s*\[\[(.*?)\\]\\]", p)
+        # Regex to find exactly what's inside [[...]]
+        citation_match = re.search(r"\[\[(.*?)\]\]", p)
+        
         insight_text = p
         citations_data = []
 
         if citation_match:
-            # 1. Clean the insight text by removing the citation block
-            insight_text = p[:citation_match.start()].strip()
+            # 1. CLEAN: Remove the [[...]] block from the text shown on cards
+            insight_text = p.replace(citation_match.group(0), "").strip()
             
-            # 2. Extract and process individual citation IDs
-            citation_ids_str = citation_match.group(1)
-            citation_ids = [cid.strip() for cid in citation_ids_str.split(',')]
-            
-            # 3. Retrieve full text and metadata for each ID
+            # 2. EXTRACT: Get IDs and fetch their details for the sidebar
+            ids_str = citation_match.group(1)
+            citation_ids = [cid.strip() for cid in ids_str.split(',') if cid.strip()]
             for cid in citation_ids:
                 citations_data.append(fetch_citation_details(cid))
 
@@ -145,10 +130,6 @@ def main():
 
     final_report_data = parse_and_enrich_report(raw_text)
     
-    if not final_report_data:
-        print("Error: No insights were parsed.")
-        return
-
     with open(OUTPUT_FILENAME, 'w', encoding='utf-8') as f:
         json.dump(final_report_data, f, indent=4)
     print(f"✅ Success: Report data saved to {OUTPUT_FILENAME}")

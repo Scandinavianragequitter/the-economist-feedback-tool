@@ -17,13 +17,11 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # --- Configuration ---
-# PERSISTENCE FIX: This must match the mount path in render.yaml
 DATA_DIR = os.environ.get("PERSISTENT_STORAGE_PATH", "data")
 API_KEY = os.environ.get("OPENROUTER_API_KEY") 
 LARGE_CONTEXT_MODEL = "x-ai/grok-4.1-fast" 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
-# Ensure the data directory exists
 os.makedirs(DATA_DIR, exist_ok=True)
 
 # --- Database Paths ---
@@ -49,56 +47,6 @@ def get_db_connection(db_path):
         logging.error(f"[DB CONNECTION ERROR] {db_path}: {e}")
         return None
 
-def fetch_entire_dataset() -> List[Dict]:
-    all_data = []
-    for platform, config in DB_SCHEMAS.items():
-        if not os.path.exists(config['db']): continue
-        conn = get_db_connection(config['db'])
-        if not conn: continue
-        try:
-            query = f"SELECT {config['id_col_db']} as id, {config['text_col']} as text FROM {config['table']}"
-            cursor = conn.cursor()
-            cursor.execute(query)
-            for row in cursor.fetchall():
-                all_data.append({"id": f"{config['prefix']}{row['id']}", "t": row['text'][:1000]})
-        except: pass
-        finally: conn.close()
-    return all_data
-
-def call_llm_api_large_context(messages: List[Dict], model: str) -> Optional[str]:
-    headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
-    payload = {"model": model, "messages": messages, "temperature": 0.0, "top_p": 1}
-    try:
-        response = requests.post(OPENROUTER_URL, headers=headers, json=payload, timeout=180)
-        response.raise_for_status()
-        content = response.json()['choices'][0]['message']['content']
-        content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL).strip()
-        content = content.replace('```json', '').replace('```', '').strip()
-        return content
-    except Exception as e:
-        logging.error(f"❌ LLM API Error: {e}")
-        return None
-
-def llm_scan_full_dataset(user_prompt: str, dataset: List[Dict]) -> List[str]:
-    data_str = "\n".join([f"{d['id']}|{d['t']}" for d in dataset])
-    system_prompt = (
-        "You are a Semantic Search Engine. "
-        "I will provide a dataset of comments in the format: `ID|Text`.\n"
-        "Your Task:\n"
-        "1. Identify comments that match the User's Query.\n"
-        "2. Return a JSON list of IDs: [\"ID1\", \"ID2\"]"
-    )
-    user_message = f"User Query: '{user_prompt}'\n\nDATASET:\n{data_str}"
-    response = call_llm_api_large_context([
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": user_message}
-    ], LARGE_CONTEXT_MODEL)
-    if not response: return []
-    try:
-        return json.loads(response)
-    except:
-        return re.findall(r'(R_|YT_|AS_|GP_)[a-zA-Z0-9_\-\.:]+', response)
-
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
@@ -108,7 +56,7 @@ def index():
 
 @app.route('/report_with_sources.json')
 def serve_report():
-    """FIX: Serves from persistent storage."""
+    """Serves the enriched dashboard report from the PERSISTENT storage path."""
     return send_from_directory(DATA_DIR, 'report_with_sources.json')
 
 @app.route('/api/source_counts', methods=['GET'])
@@ -126,23 +74,10 @@ def source_counts():
                 cur = conn.cursor()
                 cur.execute(f"SELECT COUNT(*) FROM {config['table']}")
                 counts[platform_key] = cur.fetchone()[0]
-            except:
-                counts[platform_key] = 0
+            except: counts[platform_key] = 0
             finally: conn.close()
         else: counts[platform_key] = 0
     return jsonify(counts)
-
-@app.route('/api/nl_sql_search', methods=['POST'])
-def nl_sql_search():
-    data = request.get_json()
-    nl_prompt = data.get('nl_prompt', '').strip()
-    if not nl_prompt: return jsonify({"error": "No prompt"}), 400
-    full_dataset = fetch_entire_dataset()
-    if not full_dataset: return jsonify({"results": []})
-    relevant_ids = llm_scan_full_dataset(nl_prompt, full_dataset)
-    if not relevant_ids: return jsonify({"results": []})
-    # Basic fetch details for search result IDs would go here (omitted for speed)
-    return jsonify({"results": []})
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
