@@ -10,33 +10,28 @@
     
     <style>
         :root {
-            /* COLORS */
             --primary-red: #E3120B; 
             --bg-white: #FFFFFF;
             --text-black: #111111;
             --header-bg: #000000;
             --header-text: #FFFFFF;
-            
-            /* SIZES */
             --header-height: 8rem;
         }
 
-        /* Lock the entire viewport */
         html, body {
             height: 100%;
-            overflow: hidden; /* Prevents all scrolling on the page */
+            overflow: hidden; 
         }
 
         body {
             font-family: 'Inter', sans-serif;
-            background-color: var(--bg-white); /* Use the standard white background */
+            background-color: var(--bg-white); 
             color: var(--text-black);
             margin: 0;
             padding: 0;
             overflow-x: hidden;
         }
         
-        /* --- HEADER STYLES (Matching Dashboard) --- */
         #main-header {
             position: fixed;
             top: 0; left: 0; right: 0;
@@ -89,20 +84,15 @@
         }
         .stat-val { color: var(--primary-red); font-weight: 700; margin-left: 0.25rem; }
         
-        /* --- PAGE CONTENT STYLES (Simplified) --- */
         #content-wrapper {
-            /* Content now takes the entire remaining screen height */
             height: calc(100vh - var(--header-height));
-            
-            padding-top: var(--header-height); /* Offset for the fixed header */
-            
+            padding-top: var(--header-height); 
             display: flex;
             flex-direction: column;
             align-items: center;
-            
             padding: 12rem 1rem;
-            max-width: 900px; /* Restrict content width */
-            margin: 0 auto; /* Center the content block */
+            max-width: 900px; 
+            margin: 0 auto; 
         }
         
         .doc-section {
@@ -117,29 +107,26 @@
             color: var(--text-black);
         }
         
-        /* Styling for the large text area */
         .large-text-area {
             width: 100%;
-            background-color: #f9fafb; /* Light gray background for contrast */
+            background-color: #f9fafb; 
             border: 1px solid #e5e7eb;
             padding: 1.5rem;
             border-radius: 8px;
             text-align: justify;
             font-size: 1.1rem;
             line-height: 1.6;
-            
             max-height: 100%; 
             overflow-y: auto; 
         }
         
-        /* Style for the linked title */
         .header-title a {
             color: var(--header-text);
             text-decoration: none;
             transition: color 0.15s;
         }
         .header-title a:hover {
-            color: #e5e5e5; /* Slightly lighter white on hover */
+            color: #e5e5e5; 
         }
     </style>
 </head>
@@ -147,7 +134,7 @@
 
     <header id="main-header">
         <div class="header-top">
-            <a href="question.html" class="nav-icon-btn" title="Help">
+            <a href="question.html" class="nav-icon-btn" title="Documentation">
                 <svg class="icon-svg" viewBox="0 0 24 24">
                     <circle cx="12" cy="12" r="10"></circle>
                     <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
@@ -162,9 +149,10 @@
             <div class="flex items-center" style="gap: 1rem;"> 
                 <a href="final_design.html" class="nav-icon-btn" title="Dashboard">
                     <svg class="icon-svg" viewBox="0 0 24 24">
-                        <path d="M4 8 C 6 6, 18 6, 20 8" />
-                        <path d="M4 12 C 6 10, 18 10, 20 12" />
-                        <path d="M4 16 C 6 14, 18 14, 20 16" />
+                        <line x1="4" y1="6" x2="20" y2="6"></line>
+                        <line x1="4" y1="10" x2="20" y2="10"></line>
+                        <line x1="4" y1="14" x2="20" y2="14"></line>
+                        <line x1="4" y1="18" x2="20" y2="18"></line>
                     </svg>
                 </a>
                 <a href="saved_comments.html" class="nav-icon-btn" title="View Saved Comments">
@@ -173,7 +161,7 @@
                     </svg>
                 </a>
                 
-                <a href="comment_filter_view.html" class="nav-icon-btn" title="Search Filter">
+                <a href="comment_filter.html" class="nav-icon-btn" title="Search Filter">
                     <svg class="icon-svg" viewBox="0 0 24 24">
                         <circle cx="11" cy="11" r="8"></circle>
                         <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
@@ -191,21 +179,25 @@
     </header>
 
     <div id="content-wrapper">
-        
-      
-
         <div class="large-text-area">
-            <h2>Dashboard Overview</h2>
-            <p class="mb-4">
-                This is the text area for your documentation. The frame is fixed and the content area below the header will not move, ensuring a completely stable view.
-            </p>
+            <div class="doc-section">
+                <h2>Dashboard Overview</h2>
+                <p>
+                    This tool synthesizes feedback from across the digital landscape into a single strategic view. Insights are derived using thematic clustering and LLM analysis.
+                </p>
+            </div>
+            <div class="doc-section">
+                <h2>Explorer "Chatbot"</h2>
+                <p>
+                    The Explorer uses Semantic Search (Natural Language) to find specific feedback points without requiring keywords. It "understands" the meaning of your query to scan all databases simultaneously.
+                </p>
+            </div>
         </div>
-
     </div>
 
     <script>
-        // Script to fetch source counts from the backend API (Required for the header stats)
-        const API_BASE_URL = "http://127.0.0.1:5000"; 
+        // PRODUCTION FIX: Relative path for Render
+        const API_BASE_URL = ""; 
         const COUNT_ENDPOINT = API_BASE_URL + "/api/source_counts";
         
         async function loadSourceCounts() {
@@ -217,15 +209,9 @@
                     document.getElementById('count-youtube').textContent = counts['YouTube'] || 0;
                     document.getElementById('count-ios').textContent = counts['iOS'] || 0;
                     document.getElementById('count-gp').textContent = counts['GP'] || 0;
-                } else {
-                    console.warn(`Failed to fetch source counts: HTTP status ${response.status}`);
                 }
             } catch (e) { 
                 console.warn("Error loading source counts:", e);
-                document.getElementById('count-reddit').textContent = 0;
-                document.getElementById('count-youtube').textContent = 0;
-                document.getElementById('count-ios').textContent = 0;
-                document.getElementById('count-gp').textContent = 0;
             }
         }
 

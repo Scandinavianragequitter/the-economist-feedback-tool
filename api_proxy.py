@@ -17,12 +17,14 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # --- Configuration ---
+# PERSISTENCE: This must match the mount path in render.yaml
 DATA_DIR = os.environ.get("PERSISTENT_STORAGE_PATH", "data")
+# CREDENTIALS: Using environment variable injected by Render
 API_KEY = os.environ.get("OPENROUTER_API_KEY") 
 LARGE_CONTEXT_MODEL = "x-ai/grok-4.1-fast" 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
-# Ensure the data directory exists
+# Ensure the data directory exists on the persistent disk
 os.makedirs(DATA_DIR, exist_ok=True)
 
 # --- Database Paths ---
@@ -182,13 +184,14 @@ def format_row(plat, row, conn):
         try:
             p = conn.execute("SELECT title FROM reddit_posts WHERE post_id=?", (row.get('post_id'),)).fetchone()
             if p: 
-                # Direct link to the Reddit comment
+                # FIX: Construct direct link to Reddit comment
                 url = f"https://www.reddit.com/comments/{row.get('post_id')}/_/{row.get('comment_id')}/"
                 meta = p['title']
         except: pass
     elif plat == "YouTube":
         text = row.get('text_display', '')
         date = row.get('published_at', '')
+        # Direct link to YouTube comment
         url = f"https://youtube.com/watch?v={row.get('video_id','')}&lc={row.get('comment_id','')}"
     elif plat == "AppStore":
         text = row.get('Review Text', '')
@@ -212,9 +215,19 @@ def index():
     """Serves the main report dashboard."""
     return send_from_directory('.', 'final_design.html')
 
+@app.route('/<path:filename>')
+def serve_static_html(filename):
+    """
+    FIX: Catch-all route to serve subpages like question.html, 
+    comment_filter.html, etc., from the root directory.
+    """
+    if filename.endswith(".html"):
+        return send_from_directory('.', filename)
+    return jsonify({"error": "File not found"}), 404
+
 @app.route('/report_with_sources.json')
 def serve_report():
-    """Serves the pre-generated report JSON file."""
+    """Serves the pre-generated report JSON file from the PERSISTENT storage directory."""
     return send_from_directory(DATA_DIR, 'report_with_sources.json')
 
 @app.route('/api/context_metadata', methods=['GET'])
@@ -241,7 +254,7 @@ def get_context_metadata():
 
 @app.route('/api/nl_sql_search', methods=['POST'])
 def nl_sql_search():
-    """Endpoint for the interactive natural language search feature."""
+    """Endpoint for the interactive natural language search 'chatbot' feature."""
     data = request.get_json()
     nl_prompt = data.get('nl_prompt', '').strip()
     if not nl_prompt: return jsonify({"error": "No prompt"}), 400
