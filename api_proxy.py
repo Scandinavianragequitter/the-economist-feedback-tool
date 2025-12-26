@@ -101,13 +101,27 @@ def call_llm_api_large_context(messages: List[Dict], model: str) -> Optional[str
         logging.error(f"❌ LLM API Error: {e}")
         return None
 
-def fetch_entire_dataset() -> List[Dict]:
-    """Aggregates text data from all connected platform databases."""
+def fetch_entire_dataset(platforms: Optional[List[str]] = None) -> List[Dict]:
+    """
+    Aggregates text data from the specified databases. 
+    If no platforms are provided, it scans everything.
+    """
     all_data = []
-    for platform, config in DB_SCHEMAS.items():
-        if not os.path.exists(config['db']): continue
+    # If the user selected specific platforms, filter our loop
+    target_platforms = platforms if platforms else list(DB_SCHEMAS.keys())
+
+    for platform in target_platforms:
+        if platform not in DB_SCHEMAS:
+            continue
+            
+        config = DB_SCHEMAS[platform]
+        if not os.path.exists(config['db']): 
+            continue
+            
         conn = get_db_connection(config['db'])
-        if not conn: continue
+        if not conn: 
+            continue
+            
         try:
             query = f"SELECT {config['id_col_db']} as id, {config['text_col']} as text FROM {config['table']} WHERE text IS NOT NULL AND text != ''"
             cursor = conn.cursor()
@@ -184,7 +198,7 @@ def format_row(plat, row, conn):
         try:
             p = conn.execute("SELECT title FROM reddit_posts WHERE post_id=?", (row.get('post_id'),)).fetchone()
             if p: 
-                # FIX: Construct direct link to Reddit comment
+                # Direct link to the Reddit comment
                 url = f"https://www.reddit.com/comments/{row.get('post_id')}/_/{row.get('comment_id')}/"
                 meta = p['title']
         except: pass
@@ -217,10 +231,7 @@ def index():
 
 @app.route('/<path:filename>')
 def serve_static_html(filename):
-    """
-    FIX: Catch-all route to serve subpages like question.html, 
-    comment_filter.html, etc., from the root directory.
-    """
+    """Serves subpages like question.html, comment_filter.html, etc."""
     if filename.endswith(".html"):
         return send_from_directory('.', filename)
     return jsonify({"error": "File not found"}), 404
@@ -230,38 +241,29 @@ def serve_report():
     """Serves the pre-generated report JSON file from the PERSISTENT storage directory."""
     return send_from_directory(DATA_DIR, 'report_with_sources.json')
 
-@app.route('/api/context_metadata', methods=['GET'])
-def get_context_metadata():
-    """Provides status information about the data sources."""
-    metadata = {}
-    total_records = 0
-    for platform, config in DB_SCHEMAS.items():
-        if os.path.exists(config['db']):
-            mtime = os.path.getmtime(config['db'])
-            last_updated = datetime.datetime.fromtimestamp(mtime).strftime('%Y-%m-%d %H:%M:%S')
-            conn = get_db_connection(config['db'])
-            count = 0
-            if conn:
-                try:
-                    cur = conn.cursor()
-                    cur.execute(f"SELECT COUNT(*) FROM {config['table']}")
-                    count = cur.fetchone()[0]
-                finally:
-                    conn.close()
-            metadata[platform] = {"last_updated": last_updated, "record_count": count}
-            total_records += count
-    return jsonify({"status": "success", "total_records": total_records, "platforms": metadata, "last_run": datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')})
-
 @app.route('/api/nl_sql_search', methods=['POST'])
 def nl_sql_search():
-    """Endpoint for the interactive natural language search 'chatbot' feature."""
+    """
+    FIX: Now extracts the 'platforms' list from the user request
+    to exclude data sources during the LLM scan.
+    """
     data = request.get_json()
     nl_prompt = data.get('nl_prompt', '').strip()
-    if not nl_prompt: return jsonify({"error": "No prompt"}), 400
-    full_dataset = fetch_entire_dataset()
-    if not full_dataset: return jsonify({"results": [], "msg": "Database is empty."})
+    platforms = data.get('platforms', []) # Get the user's exclusion list
+
+    if not nl_prompt: 
+        return jsonify({"error": "No prompt"}), 400
+        
+    # Only fetch data for selected platforms
+    full_dataset = fetch_entire_dataset(platforms=platforms)
+    
+    if not full_dataset: 
+        return jsonify({"results": [], "msg": "Selected databases are empty or not found."})
+        
     relevant_ids = llm_scan_full_dataset(nl_prompt, full_dataset)
-    if not relevant_ids: return jsonify({"results": []})
+    if not relevant_ids: 
+        return jsonify({"results": []})
+        
     final_results = fetch_details_for_ids(relevant_ids)
     return jsonify({"results": final_results})
 
@@ -290,12 +292,5 @@ def source_counts():
             counts[platform_key] = 0
     return jsonify(counts)
 
-@app.route('/api/get_comment_details', methods=['POST']) 
-def get_comment_details():
-    """Retrieves full details for a given list of citation IDs."""
-    data = request.get_json()
-    return jsonify(fetch_details_for_ids(data.get('citation_ids', [])))
-
 if __name__ == '__main__':
-    # Local development server settings
     app.run(debug=True, port=5000)
