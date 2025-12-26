@@ -23,25 +23,6 @@ def process_data_with_llm(json_data):
     if not OPENROUTER_API_KEY:
         return "Error: OPENROUTER_API_KEY environment variable not set."
 
-    # --- UPDATED PROMPT FOR CONCISE BULLET POINTS ---
-    SYSTEM_INSTRUCTION = (
-        "You are an assistant that synthesizes user feedback into a list of concise, high-impact bullet points. "
-        "Each bullet point must convey the 'gist' of a specific theme instantly for an executive audience. "
-        "Include citations as [[ID]]. Return plain text only."
-    )
-
-    CUSTOM_PROMPT = (
-        "\n\n--- CORE TASK: CONCISE INSIGHTS ---\n"
-        "Identify the main themes in the feedback data. For each theme, write ONE punchy, objective bullet point. "
-        "Translate emotional or outraged language into neutral business terms (e.g., 'scam' -> 'low value perception').\n\n"
-        "FORMAT RULES:\n"
-        "1. Every point must be a single, short sentence.\n"
-        "2. Every point must end with its specific source IDs in double brackets, e.g., 'Point text [[R_123, YT_abc]]'.\n"
-        "3. Separate each bullet point with TWO newlines (\\n\\n).\n"
-        "4. Do NOT use actual bullet symbols (like '-' or '•'); just provide the text.\n\n"
-        "--- INPUT DATA ---\n"
-    )
-
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "Content-Type": "application/json",
@@ -49,13 +30,33 @@ def process_data_with_llm(json_data):
         "X-Title": "The Economist Feedback Analyzer"
     }
 
+    # Enhanced System Prompt for Actionable and Concrete Insights
+    system_prompt = (
+        "You are an expert Product Analyst and UX Researcher for The Economist. "
+        "Your goal is to digest user feedback and produce a high volume of granular, actionable insights. "
+        "\n\nCRITICAL INSTRUCTIONS:"
+        "\n1. PRIORITIZE CONCRETE FEEDBACK: Focus on specific technical bugs, UI/UX friction points, missing features, "
+        "or content delivery issues."
+        "\n2. BE ACTIONABLE: Every insight must be framed as a specific problem followed by a suggested solution or improvement."
+        "\n3. VOLUME: Aim to identify at least 10-15 distinct insights if the data allows. Do not aggregate unique issues into vague categories."
+        "\n4. CITATIONS: You MUST include citations for every insight in the format: [[ID1, ID2]]. The ID must match the data exactly."
+        "\n5. FORMAT: Provide each insight as a standalone paragraph or bullet point. Do not include an intro or outro."
+    )
+
+    user_content = (
+        "Analyze the following user feedback data from Reddit, YouTube, and App Stores. "
+        "Identify specific pain points and provide concrete, actionable recommendations for each. "
+        "Ensure specific feedback is prioritized over general praise or generic complaints.\n\n"
+        f"INPUT DATA:\n{json_data}"
+    )
+
     payload = {
         "model": MODEL_NAME,
         "messages": [
-            {"role": "system", "content": SYSTEM_INSTRUCTION},
-            {"role": "user", "content": CUSTOM_PROMPT + json_data}
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_content}
         ],
-        "temperature": 0.0001
+        "temperature": 0.2 # Slightly increased for more diverse insight discovery while maintaining focus
     }
 
     for attempt in range(MAX_RETRIES):
@@ -79,7 +80,6 @@ def main():
     analysis = process_data_with_llm(json_data)
     with open(LLM_TEXT_OUTPUT, 'w', encoding='utf-8') as out_f:
         out_f.write(analysis)
-    print(f"✅ Concise analysis saved to {LLM_TEXT_OUTPUT}")
 
 if __name__ == "__main__":
     main()
