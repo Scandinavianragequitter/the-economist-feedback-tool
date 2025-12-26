@@ -9,12 +9,6 @@ services:
         value: /var/lib/data
       - key: OPENROUTER_API_KEY
         sync: false
-      - key: YOUTUBE_API_KEY
-        sync: false
-      - key: REDDIT_CLIENT_ID
-        sync: false
-      - key: REDDIT_CLIENT_SECRET
-        sync: false
     disk:
       name: feedback-data
       mountPath: /var/lib/data
