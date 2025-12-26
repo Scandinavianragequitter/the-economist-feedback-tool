@@ -32,10 +32,9 @@ def get_db_connection(db_path: str) -> Optional[sqlite3.Connection]:
         return None
     try:
         conn = sqlite3.connect(db_path)
-        conn.row_factory = sqlite3.Row
+        conn.row_factory = sqlite3.Row 
         return conn
-    except sqlite3.Error as e:
-        print(f"❌ DB Error: {e}")
+    except sqlite3.Error:
         return None
 
 def fetch_citation_details(citation_id: str) -> Dict[str, Any]:
@@ -48,7 +47,7 @@ def fetch_citation_details(citation_id: str) -> Dict[str, Any]:
     conn = get_db_connection(config["db_path"])
     
     if not conn:
-        return {"id": citation_id, "comment_text": "Data source unavailable", "comment_url": "#"}
+        return {"id": citation_id, "comment_text": "DB connection failed", "comment_url": "#"}
 
     sql_query = ""
     if platform_key == "R":
@@ -67,66 +66,62 @@ def fetch_citation_details(citation_id: str) -> Dict[str, Any]:
     try:
         cursor = conn.execute(sql_query)
         row = cursor.fetchone()
-
         if row:
             result = dict(row)
             url = result.get('comment_url', '#')
             if platform_key == "R":
-                p_cursor = conn.execute(f"SELECT post_url FROM reddit_posts WHERE post_id = '{result['post_id']}'")
-                p_row = p_cursor.fetchone()
-                if p_row: url = f"https://www.reddit.com{p_row['post_url']}"
+                p_row = conn.execute(f"SELECT post_url FROM reddit_posts WHERE post_id = '{result['post_id']}'").fetchone()
+                if p_row: url = f"https://www.reddit.com{dict(p_row)['post_url']}"
             elif platform_key == "YT":
                 url = f"https://www.youtube.com/watch?v={result['video_id']}&lc={citation_id.split('_')[-1]}"
             
             date_val = str(result.get('date')).split(' ')[0] if result.get('date') else None
-            
-            return {
-                "id": citation_id,
-                "comment_text": result.get('comment_text', 'N/A'),
-                "comment_url": url,
-                "source_platform": config['platform_name'],
-                "date": date_val
-            }
-    except Exception as e:
-        print(f"❌ Fetch Error: {e}")
-    finally:
-        if conn: conn.close()
-
-    return {"id": citation_id, "comment_text": "Source not found.", "comment_url": "#"}
+            return {"id": citation_id, "comment_text": result.get('comment_text', 'N/A'), "comment_url": url, "source_platform": config['platform_name'], "date": date_val}
+    except: pass
+    finally: conn.close()
+    return {"id": citation_id, "comment_text": "Source not found", "comment_url": "#"}
 
 def parse_and_enrich_report(raw_text: str) -> List[Dict[str, Any]]:
-    """
-    Parses short bullet points and enriches them with citations.
-    """
-    raw_text = raw_text.strip()
     parsed_report = []
-    citation_cache: Dict[str, Dict[str, Any]] = {}
+    # Split into paragraphs (one pain point per paragraph)
+    paragraphs = [p.strip() for p in raw_text.split('\n\n') if p.strip()]
 
-    # Look for bullet-point lines containing citation brackets
-    pattern = re.compile(r'(.*?)\s*\[\[([^\]]+)\]\]', re.DOTALL)
-    
-    for match in pattern.finditer(raw_text):
-        insight_text = match.group(1).strip().replace("\n", " ")
-        raw_ids = match.group(2).strip()
+    for p in paragraphs:
+        # Match [[ID1, ID2]]
+        citation_match = re.search(r"\[\[(.*?)\]\]", p)
         
-        citation_ids = [id.strip() for id in raw_ids.split(',') if id.strip()]
-        citations = []
-        
-        for cid in citation_ids:
-            if cid not in citation_cache:
-                citation_cache[cid] = fetch_citation_details(cid)
-            citations.append(citation_cache[cid])
+        insight_text = p
+        citations_data = []
+        count = 0
+
+        if citation_match:
+            # Strip citation from text
+            insight_text = p.replace(citation_match.group(0), "").strip()
+            # Remove any trailing numbers like "15." if present (optional safety)
+            insight_text = re.sub(r"^\d+\.\s*", "", insight_text)
             
+            ids_str = citation_match.group(1)
+            citation_ids = [cid.strip() for cid in ids_str.split(',') if cid.strip()]
+            
+            # UNIQUE COUNT for quantitative data
+            unique_ids = sorted(list(set(citation_ids)))
+            count = len(unique_ids)
+            
+            for cid in unique_ids:
+                citations_data.append(fetch_citation_details(cid))
+
         parsed_report.append({
             "insight": insight_text,
-            "citations": citations
+            "citations": citations_data,
+            "count": count # ADDED: Quantitative frequency
         })
 
     return parsed_report
 
 def main():
+    print("--- Starting Report Generator ---")
     if not os.path.exists(INPUT_FILE_PATH):
-        print(f"❌ Missing: {INPUT_FILE_PATH}")
+        print(f"❌ Error: {INPUT_FILE_PATH} not found.")
         return
 
     with open(INPUT_FILE_PATH, 'r', encoding='utf-8') as f:
@@ -136,7 +131,7 @@ def main():
     
     with open(OUTPUT_FILENAME, 'w', encoding='utf-8') as f:
         json.dump(final_report_data, f, indent=4)
-    print(f"✅ Enhanced bullet-point report saved to {OUTPUT_FILENAME}")
+    print(f"✅ Success: Quantitative report saved to {OUTPUT_FILENAME}")
 
 if __name__ == "__main__":
     main()

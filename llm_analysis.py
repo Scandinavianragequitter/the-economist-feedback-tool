@@ -2,6 +2,7 @@ import requests
 import sys
 import os
 import time
+import re
 
 # --- PERSISTENCE & CONFIG ---
 DATA_DIR = os.environ.get("PERSISTENT_STORAGE_PATH", "data")
@@ -14,14 +15,44 @@ except ImportError:
     MODEL_NAME = "tngtech/deepseek-r1t2-chimera:free"
     HTTP_REFERER = "https://github.com/my-economist-report-app"
 
-# FIX: Use absolute paths in the persistent disk
+# Absolute paths for Render Persistent Disk
 INPUT_JSON_FILE = os.path.join(DATA_DIR, "curated_data_for_llm.json") 
 LLM_TEXT_OUTPUT = os.path.join(DATA_DIR, "llm_analysis_output.txt")
+
 MAX_RETRIES, INITIAL_DELAY = 5, 5
 
 def process_data_with_llm(json_data):
+    """
+    Sends data to OpenRouter with a prompt optimized for identifying pain points
+    without suggesting solutions or using bolding.
+    """
     if not OPENROUTER_API_KEY:
         return "Error: OPENROUTER_API_KEY environment variable not set."
+
+    # --- UPDATED PROMPT: NO BOLDING, NO SOLUTIONS, JUST PAIN POINTS ---
+    SYSTEM_INSTRUCTION = (
+        "You are a Product Analyst specializing in identifying user friction. "
+        "Your goal is to extract specific, concrete pain points from user feedback. "
+        "Each insight must be a single, punchy sentence describing a problem. "
+        "\n\nRULES:"
+        "\n1. NO BOLDING: Do not use asterisks (**) or any markdown formatting for emphasis."
+        "\n2. NO SOLUTIONS: Identify only the identified pain point. Do not suggest improvements."
+        "\n3. BE CONCRETE: Prioritize specific technical bugs or UX friction (e.g., 'App crashes on iPad mini') over general complaints."
+        "\n4. CITATIONS: End every sentence with its source IDs in double brackets [[ID1, ID2]]."
+        "\n5. NEUTRAL LANGUAGE: Translate emotional language into neutral business terms."
+    )
+
+    CUSTOM_PROMPT = (
+        "\n\n--- CORE TASK: IDENTIFY PAIN POINTS ---\n"
+        "Analyze the following data. Identify the most frequent and specific pain points. "
+        "Frame each as a single objective sentence. "
+        "\n\nFORMAT EXAMPLE:\n"
+        "Users on iPad mini devices report frequent app crashes that block access entirely [[R_123, AS_456]].\n\n"
+        "Frequent interstitial ads during article transitions create significant navigation friction [[YT_abc, GP_def]].\n\n"
+        "--- INPUT DATA ---\n"
+    )
+    
+    user_message = CUSTOM_PROMPT + json_data
 
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
@@ -30,40 +61,23 @@ def process_data_with_llm(json_data):
         "X-Title": "The Economist Feedback Analyzer"
     }
 
-    # Enhanced System Prompt for Actionable and Concrete Insights
-    system_prompt = (
-        "You are an expert Product Analyst and UX Researcher for The Economist. "
-        "Your goal is to digest user feedback and produce a high volume of granular, actionable insights. "
-        "\n\nCRITICAL INSTRUCTIONS:"
-        "\n1. PRIORITIZE CONCRETE FEEDBACK: Focus on specific technical bugs, UI/UX friction points, missing features, "
-        "or content delivery issues."
-        "\n2. BE ACTIONABLE: Every insight must be framed as a specific problem followed by a suggested solution or improvement."
-        "\n3. VOLUME: Aim to identify at least 10-15 distinct insights if the data allows. Do not aggregate unique issues into vague categories."
-        "\n4. CITATIONS: You MUST include citations for every insight in the format: [[ID1, ID2]]. The ID must match the data exactly."
-        "\n5. FORMAT: Provide each insight as a standalone paragraph or bullet point. Do not include an intro or outro."
-    )
-
-    user_content = (
-        "Analyze the following user feedback data from Reddit, YouTube, and App Stores. "
-        "Identify specific pain points and provide concrete, actionable recommendations for each. "
-        "Ensure specific feedback is prioritized over general praise or generic complaints.\n\n"
-        f"INPUT DATA:\n{json_data}"
-    )
-
     payload = {
         "model": MODEL_NAME,
         "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_content}
+            {"role": "system", "content": SYSTEM_INSTRUCTION},
+            {"role": "user", "content": user_message}
         ],
-        "temperature": 0.2 # Slightly increased for more diverse insight discovery while maintaining focus
+        "temperature": 0.0001
     }
 
     for attempt in range(MAX_RETRIES):
         try:
             response = requests.post(OPENROUTER_API_URL, headers=headers, json=payload, timeout=300)
             response.raise_for_status()
-            return response.json()['choices'][0]['message']['content'].strip()
+            content = response.json()['choices'][0]['message']['content'].strip()
+            # Clean DeepSeek/Reasoning tags
+            content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL).strip()
+            return content
         except Exception as e:
             if attempt < MAX_RETRIES - 1:
                 time.sleep(INITIAL_DELAY * (2 ** attempt))
@@ -77,9 +91,12 @@ def main():
         sys.exit(1)
     with open(INPUT_JSON_FILE, 'r', encoding='utf-8') as f:
         json_data = f.read()
+    
     analysis = process_data_with_llm(json_data)
+    
     with open(LLM_TEXT_OUTPUT, 'w', encoding='utf-8') as out_f:
         out_f.write(analysis)
+    print(f"✅ Pain-point analysis saved to {LLM_TEXT_OUTPUT}")
 
 if __name__ == "__main__":
     main()
