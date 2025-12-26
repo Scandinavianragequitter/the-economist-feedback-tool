@@ -2,7 +2,6 @@ import requests
 import sys
 import os
 import time
-import re
 
 # --- PERSISTENCE & CONFIG ---
 DATA_DIR = os.environ.get("PERSISTENT_STORAGE_PATH", "data")
@@ -13,39 +12,35 @@ try:
 except ImportError:
     OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
     MODEL_NAME = "tngtech/deepseek-r1t2-chimera:free"
-    HTTP_REFERER = "https://github.com/scandinavianragequitter/economist-feedback"
+    HTTP_REFERER = "https://github.com/my-economist-report-app"
 
-# Absolute paths for Render Persistent Disk
+# FIX: Use absolute paths in the persistent disk
 INPUT_JSON_FILE = os.path.join(DATA_DIR, "curated_data_for_llm.json") 
 LLM_TEXT_OUTPUT = os.path.join(DATA_DIR, "llm_analysis_output.txt")
-
 MAX_RETRIES, INITIAL_DELAY = 5, 5
 
 def process_data_with_llm(json_data):
     if not OPENROUTER_API_KEY:
         return "Error: OPENROUTER_API_KEY environment variable not set."
 
+    # --- UPDATED PROMPT FOR CONCISE BULLET POINTS ---
     SYSTEM_INSTRUCTION = (
-        "You are an assistant that digests user feedback data (Reddit threads, YouTube comments, App Store reviews, and Google Play reviews) "
-        "and synthesizes an executive-level, concise summary. Return plain text only."
+        "You are an assistant that synthesizes user feedback into a list of concise, high-impact bullet points. "
+        "Each bullet point must convey the 'gist' of a specific theme instantly for an executive audience. "
+        "Include citations as [[ID]]. Return plain text only."
     )
 
     CUSTOM_PROMPT = (
-        "\n\n--- CORE TASK: INSIGHTS FROM USER FEEDBACK ---\n"
-        "Based on the input data, which includes comments from Reddit (R_), YouTube (YT_), App Store (AS_), and Google Play (GP_), perform the following strategic analysis:\n"
-        "1. Identify the main themes of the audience's feedback. CRITICAL: Translate all emotional, sarcastic, or outraged language into neutral, distanced language (e.g., change 'greedy scam' to 'high price sensitivity').\n"
-        "2. Write a clear, concise report, using complete sentences, where each paragraph contains a measured account of one feedback topic.\n"
-        "   - **Prioritize Actionable Value Creation:** Focus the majority of the report on insights where user and business incentives align (features, recognizing audience habits, utility). Give these the most detail.\n"
-        "   - **Summarize Value Capture:** For feedback where incentives collide (pricing, costs, subscriptions)\n"
-        "3. CRITICAL REQUIREMENT: Immediately after *each* insight you MUST insert a list of the unique `ID`s from the input that support and relate thematically to that specific point. The ID list must be enclosed in double square brackets `[[...]]` and separated by commas.\n"
-        "\nCRITICAL FORMATTING NOTE: Ensure there are always two blank lines (\\n\\n) between the end of one insight's citation block (]]) and the start of the next insight's text.\n"
-        "\n--- FORMAT EXAMPLE ---\n"
-        "The analysis suggests a high demand for a dark mode feature to improve readability at night [[R_1a2b, YT_11j2, GP_6r7s]].\n\n"
-        "While users appreciate the content, a significant segment expresses friction regarding the current subscription pricing structure [[AS_8t9u, YT_5m6n]].\n"
-        "\n--- INPUT DATA ---\n"
+        "\n\n--- CORE TASK: CONCISE INSIGHTS ---\n"
+        "Identify the main themes in the feedback data. For each theme, write ONE punchy, objective bullet point. "
+        "Translate emotional or outraged language into neutral business terms (e.g., 'scam' -> 'low value perception').\n\n"
+        "FORMAT RULES:\n"
+        "1. Every point must be a single, short sentence.\n"
+        "2. Every point must end with its specific source IDs in double brackets, e.g., 'Point text [[R_123, YT_abc]]'.\n"
+        "3. Separate each bullet point with TWO newlines (\\n\\n).\n"
+        "4. Do NOT use actual bullet symbols (like '-' or '•'); just provide the text.\n\n"
+        "--- INPUT DATA ---\n"
     )
-    
-    user_message = CUSTOM_PROMPT + json_data
 
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
@@ -58,7 +53,7 @@ def process_data_with_llm(json_data):
         "model": MODEL_NAME,
         "messages": [
             {"role": "system", "content": SYSTEM_INSTRUCTION},
-            {"role": "user", "content": user_message}
+            {"role": "user", "content": CUSTOM_PROMPT + json_data}
         ],
         "temperature": 0.0001
     }
@@ -67,10 +62,7 @@ def process_data_with_llm(json_data):
         try:
             response = requests.post(OPENROUTER_API_URL, headers=headers, json=payload, timeout=300)
             response.raise_for_status()
-            content = response.json()['choices'][0]['message']['content'].strip()
-            # Remove DeepSeek thinking tags
-            content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL).strip()
-            return content
+            return response.json()['choices'][0]['message']['content'].strip()
         except Exception as e:
             if attempt < MAX_RETRIES - 1:
                 time.sleep(INITIAL_DELAY * (2 ** attempt))
@@ -84,12 +76,10 @@ def main():
         sys.exit(1)
     with open(INPUT_JSON_FILE, 'r', encoding='utf-8') as f:
         json_data = f.read()
-    
     analysis = process_data_with_llm(json_data)
-    
     with open(LLM_TEXT_OUTPUT, 'w', encoding='utf-8') as out_f:
         out_f.write(analysis)
-    print(f"✅ Success: LLM output saved to {LLM_TEXT_OUTPUT}")
+    print(f"✅ Concise analysis saved to {LLM_TEXT_OUTPUT}")
 
 if __name__ == "__main__":
     main()

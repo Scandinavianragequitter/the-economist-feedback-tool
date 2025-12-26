@@ -118,11 +118,11 @@
         }
         #report-scroller::-webkit-scrollbar { display: none; }
 
-        /* Insight Card */
+        /* Insight Card - UPDATED FOR CONCISE LIST SCANNING */
         .insight-card {
             width: var(--text-block-width);
             margin-left: 2rem; 
-            margin-bottom: 35vh; 
+            margin-bottom: 25vh; /* Reduced for faster list-scanning */
             position: relative;
             padding-left: 3rem; 
             scroll-snap-align: center;
@@ -130,8 +130,8 @@
             transform: scale(0.95); 
             transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1); 
             font-size: 1.15rem;
-            line-height: 1.7;
-            text-align: justify; 
+            line-height: 1.4; /* Tighter for concise bullet points */
+            text-align: left; /* Changed from justify to feel more like a list */
             color: #333;
             z-index: 51; 
         }
@@ -270,7 +270,6 @@
     </div>
 
     <script>
-        // PRODUCTION FIX: Use relative paths so it works on Render
         const API_BASE_URL = ""; 
         const REPORT_ENDPOINT = "/report_with_sources.json";
         const COUNT_ENDPOINT = "/api/source_counts";
@@ -282,86 +281,6 @@
             await loadSourceCounts();
             await loadReport();
         });
-
-        // --- LOCAL STORAGE & BOOKMARK LOGIC ---
-
-        function getSavedComments() {
-            const saved = localStorage.getItem('savedComments');
-            return saved ? JSON.parse(saved) : {};
-        }
-
-        function saveComments(commentsObject) {
-            localStorage.setItem('savedComments', JSON.stringify(commentsObject));
-        }
-
-        function isCommentSaved(commentText) {
-            const saved = getSavedComments();
-            return saved.hasOwnProperty(commentText.trim().replace(/^"|"$/g, ''));
-        }
-
-        function getBookmarkIconHtml(citation) {
-            const commentText = citation.comment_text.trim();
-            const isSaved = isCommentSaved(commentText);
-            const commentData = {
-                text: commentText,
-                url: citation.comment_url,
-                platform: citation.source_platform,
-                date: citation.date,
-                id: citation.id
-            };
-            const dataStr = JSON.stringify(commentData).replace(/'/g, '&#39;'); 
-
-            const iconColor = isSaved ? 'var(--primary-red)' : 'grey';
-            const iconFill = isSaved ? 'var(--primary-red)' : 'none';
-            const titleText = isSaved ? 'Remove from saved' : 'Save this comment';
-
-            return `
-                <button onclick='toggleSaveComment(${dataStr}); event.stopPropagation();' 
-                        class="nav-icon-btn p-1 transition duration-200" title="${titleText}" style="transform: scale(0.7); margin-right: -10px;">
-                    <svg class="bookmark-icon" style="width: 28px; height: 28px; stroke: ${iconColor}; fill: ${iconFill}; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;" viewBox="0 0 24 24">
-                        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path>
-                    </svg>
-                </button>
-            `;
-        }
-        
-        function updateBookmarkIconInCard(card) {
-            const textElement = card.querySelector('.text-black.italic');
-            const bookmarkIcon = card.querySelector('.bookmark-icon');
-            const bookmarkButton = bookmarkIcon ? bookmarkIcon.parentElement : null;
-            
-            if (textElement && bookmarkIcon) {
-                const cardText = textElement.textContent.trim().replace(/^"|"$/g, '');
-                const isSaved = isCommentSaved(cardText);
-                const iconColor = isSaved ? 'var(--primary-red)' : 'grey';
-                const iconFill = isSaved ? 'var(--primary-red)' : 'none';
-                const titleText = isSaved ? 'Remove from saved' : 'Save this comment';
-
-                bookmarkIcon.style.stroke = iconColor;
-                bookmarkIcon.style.fill = iconFill;
-                if (bookmarkButton) bookmarkButton.title = titleText;
-            }
-        }
-
-        function updateAllBookmarkIcons() {
-            setTimeout(() => {
-                document.querySelectorAll('.source-card').forEach(updateBookmarkIconInCard);
-            }, 50);
-        }
-
-        function toggleSaveComment(commentData) {
-            let saved = getSavedComments();
-            const key = commentData.text; 
-            if (saved.hasOwnProperty(key)) {
-                delete saved[key];
-            } else {
-                saved[key] = commentData;
-            }
-            saveComments(saved);
-            updateAllBookmarkIcons();
-        }
-
-        // --- CORE DASHBOARD LOGIC ---
 
         async function loadSourceCounts() {
             try {
@@ -452,7 +371,6 @@
                         let platformName = c.source_platform;
                         if(platformName === 'App Store') platformName = 'iOS';
                         const dateStr = c.date ? c.date.split(' ')[0] : 'Recent';
-                        const bookmarkHtml = getBookmarkIconHtml(c);
                         const html = `
                             <div class="source-card">
                                 <div class="source-meta">
@@ -464,7 +382,6 @@
                                 </div>
                                 <div class="flex justify-between items-center mt-3">
                                     <a href="${c.comment_url}" target="_blank" class="text-xs text-red-600 font-bold hover:underline uppercase tracking-wide">see original&rarr;</a>
-                                    ${bookmarkHtml} 
                                 </div>
                             </div>
                         `;
@@ -472,10 +389,8 @@
                     });
                 }
                 sidebar.classList.add('visible');
-                updateAllBookmarkIcons(); 
             }, 150); 
         }
-
     </script>
 </body>
 </html>
