@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audience feedback - Summary </title>
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #F87171; /* Accent Red */
+        }
+        
+        /* General page cleanup and fixed background */
+        html {
+            scroll-behavior: smooth; 
+            overflow: hidden; 
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #000000; 
+            color: #FFFFFF;
+            background-attachment: fixed;
+            margin: 0;
+            padding: 0;
+            /* Increased padding top to account for the new height of the header */
+            padding-top: 7.5rem; 
+            overflow: hidden; 
+        }
+
+        /* Essential for full height scrolling columns */
+        .main-content-scroll {
+            min-height: calc(100vh - 7.5rem); /* Updated height calculation */
+        }
+        
+        /* Fixed Header height adjustment */
+        #main-header-fixed {
+            height: 7.5rem; /* Set a fixed height for the header */
+        }
+        
+        /* ----------------------------------------------------- */
+        /* LAYOUT CONTROL (NEW IMPLEMENTATION) */
+        /* ----------------------------------------------------- */
+
+        #content-layout-wrapper {
+            /* Initial State: Center the report content */
+            max-width: 54rem; /* Defines the "block text" width */
+            margin-left: auto;
+            margin-right: auto;
+            display: grid;
+            grid-template-columns: 1fr; /* Single column */
+            gap: 2rem;
+            transition: all 0.5s ease-in-out; /* Smooth transition for the layout change */
+        }
+
+        #sources-column {
+            /* Sources column is hidden by default */
+            display: none; 
+        }
+
+        /* Active State: When a citation is clicked, activate 2-column layout */
+        #content-layout-wrapper.show-sidebar {
+            /* Remove max-width and centering for the full-width grid */
+            max-width: 100%;
+            /* Set the two columns: Report (2/3) and Sources (1/3) */
+            grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); 
+        }
+
+        #content-layout-wrapper.show-sidebar #report-column {
+            /* Remove the centering effect when sidebar is shown */
+            margin: 0;
+        }
+
+        #content-layout-wrapper.show-sidebar #sources-column {
+            /* Show the sidebar */
+            display: block; 
+        }
+
+        /* ----------------------------------------------------- */
+        /* SCROLLBAR & PANEL STYLES (Remaining from previous versions) */
+        /* ----------------------------------------------------- */
+
+        /* Target the scrollable report area */
+        #insights-content-wrapper {
+            max-height: calc(100vh - 9rem);
+            overflow-y: auto; 
+            padding-right: 1.5rem;
+            padding-bottom: 2rem;
+            -ms-overflow-style: none;  
+            scrollbar-width: none;  
+        }
+
+        /* Target the scrollable sources detail area */
+        #citation-details {
+            max-height: calc(calc(100vh - 16rem) + 4rem); 
+            overflow-y: auto;
+            -ms-overflow-style: none;  
+            scrollbar-width: none;  
+        }
+
+        /* WebKit specific selector to hide scrollbar track */
+        #insights-content-wrapper::-webkit-scrollbar,
+        #citation-details::-webkit-scrollbar {
+            display: none; 
+            width: 0 !important;
+        }
+
+        /* Source panel settings */
+        #sources-panel {
+            min-height: calc(100vh - 9rem); 
+            border-left: 4px solid var(--primary); 
+        }
+
+        .citation-link {
+            color: var(--primary); 
+            cursor: pointer;
+            text-decoration: none;
+            font-weight: 600;
+            padding: 1px 3px;
+            border-radius: 4px;
+            transition: background-color 0.2s, color 0.2s;
+        }
+        .citation-link:hover {
+            text-decoration: underline;
+        }
+        .source-card {
+            transition: all 0.2s;
+        }
+        .source-card:hover {
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4); 
+            transform: translateY(-1px);
+        }
+        
+        .original-link {
+            color: #F3F4F6;
+            text-decoration: underline;
+            font-weight: 600;
+            transition: color 0.15s;
+        }
+        .original-link:hover {
+             color: var(--primary);
+        }
+
+        .hide-original-link {
+            display: none !important;
+        }
+        
+        @media (max-width: 1024px) { /* Adjust breakpoint for smaller screens where sidebar should remain single column */
+            #content-layout-wrapper {
+                 /* Restore single column on small screens, keeping report centered */
+                grid-template-columns: 1fr;
+                max-width: 54rem;
+            }
+            #content-layout-wrapper.show-sidebar #sources-column {
+                 /* Sources will stack below the report on small screens */
+                 display: block;
+                 max-width: 54rem;
+                 margin: 0 auto;
+            }
+            .main-content-scroll {
+                min-height: auto;
+            }
+            #insights-content-wrapper, #citation-details {
+                max-height: none;
+                overflow-y: visible;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header id="main-header-fixed" class="fixed top-0 left-0 right-0 z-20 bg-black shadow-2xl border-b border-red-500 py-4 px-6 md:px-10">
+        <div class="max-w-7xl mx-auto">
+            <h1 class="text-3xl font-bold text-white">The Economist </h1>
+            <p class="text-gray-400">Audience Feedback</p>
+            
+            <div id="source-counts-display" class="text-sm font-medium text-gray-500 mt-2">
+                <span id="count-reddit" class="inline-block mr-4">Reddit: <span class="font-bold text-red-400">--</span></span>
+                <span id="count-youtube" class="inline-block mr-4">YouTube: <span class="font-bold text-red-400">--</span></span>
+                <span id="count-ios" class="inline-block mr-4">App Store: <span class="font-bold text-red-400">--</span></span>
+                <span id="count-gp" class="inline-block">Google Play Store: <span class="font-bold text-red-400">--</span></span>
+            </div>
+        </div>
+    </header>
+
+    <div class="main-content-scroll p-4 md:p-10">
+        <div id="content-layout-wrapper" class="max-w-7xl mx-auto">
+        
+            <div id="report-column" class="bg-black rounded-xl shadow-lg p-0">
+                
+                <div id="insights-content-wrapper" class="p-6">
+                    <div id="insights-content">
+                        <div id="loading-message" class="text-center p-10 text-gray-500 italic">
+                            Loading report data...
+                        </div>
+                    </div>
+                    
+                    <div class="mt-10 border-t border-gray-700 pt-6">
+                        <h2 class="text-xl font-bold mb-4 text-white">Ask a Question </h2>
+                        
+                        <div id="chatbot-answer" class="bg-black border border-gray-800 p-4 rounded-lg min-h-[6rem] mb-4 text-gray-300">
+                            <p class="italic text-gray-500">Ask a question about the customer feedback, and the AI will search the comments for an answer...</p>
+                        </div>
+
+                        <textarea id="prompt-input" rows="2" class="w-full bg-black border border-gray-700 p-3 rounded-lg text-white placeholder-gray-500 focus:ring-red-500 focus:border-red-500" placeholder="e.g., Are there any comments specifically mentioning slow loading times in the app?"></textarea>
+                        
+                        <button onclick="queryChatbot()" id="chat-button" class="mt-3 w-full sm:w-auto px-6 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition duration-150 disabled:opacity-50">
+                            Ask Data
+                        </button>
+                        <p id="chat-status" class="mt-2 text-sm text-red-500 hidden">Loading...</p>
+                    </div>
+
+                </div>
+            </div>
+
+            <div id="sources-column" class="hidden">
+                <div id="sources-panel" class="sticky top-6 bg-black p-6 rounded-xl shadow-lg border-t-4 border-red-500">
+                    <h2 class="text-2xl font-bold mb-4 text-white">
+                        <span id="source-header-count">0</span>/<span id="source-total-count">0</span> Sources Cited
+                    </h2>
+                    <div id="citation-details" class="space-y-4 text-sm text-gray-300 pb-16"></div>
+                    <p id="citation-placeholder" class="text-gray-500 italic">Click a citation number (e.g., <span class="citation-link">[1]</span>) in the report to view the supporting comment here.</p>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+
+    <script>
+        let REPORT_DATA = [];
+        let CHATBOT_ENABLED = false; 
+        let citationMap = {}; 
+        let globalCitationIndex = 1;
+        let citedIds = new Set(); 
+
+        // --- LLM CONFIGURATION (SECURE PROXY SETUP) ---
+        const MODEL_NAME = "tngtech/deepseek-r1t2-chimera:free";
+        // FIX: Explicitly target the Flask server running on port 5000
+        const API_BASE_URL = "http://127.0.0.1:5000"; 
+        const SECURE_API_ENDPOINT = API_BASE_URL + "/api/secure-llm-proxy"; 
+        const COMMENT_DETAILS_ENDPOINT = API_BASE_URL + "/api/get_comment_details"; 
+        const CONTEXT_METADATA_ENDPOINT = API_BASE_URL + "/api/context_metadata"; 
+        const COUNT_API_ENDPOINT = API_BASE_URL + "/api/source_counts"; 
+        
+        const CONSERVATIVE_SYSTEM_PROMPT = 
+            "You are a highly conservative, data-only analysis assistant. Your only source of truth is the JSON data provided in the user's prompt. \n" +
+            "You must synthesize an answer that is strictly based on direct evidence found in the provided JSON comments. \n" + 
+            "***CRITICAL INSTRUCTION: You MUST place the citation IDs immediately after the sentence they support, using the format [[ID1, ID2]]. DO NOT group all IDs at the end of the response.***\n" +
+            "If the comments do not contain a clear, relevant answer to the user's question, you MUST respond only with the exact phrase: 'Based on the available data no insights are available'.";
+        // ------------------------------------------------------------
+
+
+        async function fetchSourceCounts() {
+            let grandTotal = 0;
+            try {
+                const countResponse = await fetch(COUNT_API_ENDPOINT);
+                if (countResponse.ok) {
+                    const counts = await countResponse.json();
+                    
+                    // Calculate grand total by summing all counts
+                    grandTotal = (counts['Reddit'] || 0) + 
+                                 (counts['YouTube'] || 0) + 
+                                 (counts['iOS'] || 0) + 
+                                 (counts['GP'] || 0);
+
+                    // 2. UPDATED JS: Use full labels in the string replacement
+                    document.getElementById('count-reddit').innerHTML = `Reddit: <span class="font-bold text-red-400">${counts['Reddit'] || 0}</span>`;
+                    document.getElementById('count-youtube').innerHTML = `YouTube: <span class="font-bold text-red-400">${counts['YouTube'] || 0}</span>`;
+                    document.getElementById('count-ios').innerHTML = `App Store: <span class="font-bold text-red-400">${counts['iOS'] || 0}</span>`; // Changed 'iOS' label
+                    document.getElementById('count-gp').innerHTML = `Google Play Store: <span class="font-bold text-red-400">${counts['GP'] || 0}</span>`; // Changed 'GP' label
+                    
+                }
+            } catch (e) {
+                console.warn("Failed to load source counts. Ensure /api/source_counts is running on the backend.", e);
+            }
+            return grandTotal; // Return the calculated grand total
+        }
+
+
+        // Function to fetch the data from the JSON files
+        async function fetchReportData() {
+            const loadingMessage = document.getElementById('loading-message');
+            
+            // 1. Fetch ALL source counts (This determines the Y value)
+            const totalDatabaseCount = await fetchSourceCounts();
+            
+            // --- 2. Fetch Main Report (CRITICAL) ---
+            try {
+                const reportResponse = await fetch('report_with_sources.json');
+                if (!reportResponse.ok) throw new Error(`Report HTTP error! status: ${reportResponse.status}`);
+                REPORT_DATA = await reportResponse.json();
+
+            } catch (error) {
+                console.error("Failed to load critical report JSON:", error);
+                loadingMessage.innerHTML = `❌ Error loading report data: ${error.message}. Ensure report_with_sources.json exists and is accessible.`;
+                return; 
+            }
+
+            // --- 3. Attempt to Fetch Context Metadata (FOR Chatbot) ---
+            let totalSources = 0;
+            try {
+                const metadataResponse = await fetch(CONTEXT_METADATA_ENDPOINT);
+                if (metadataResponse.ok) {
+                    const metadata = await metadataResponse.json();
+                    CHATBOT_ENABLED = metadata.chatbot_enabled;
+                    totalSources = metadata.total_sources; 
+                } 
+            } catch (contextError) {
+                console.warn("Error connecting to context metadata endpoint.", contextError);
+            }
+            
+            // --- 4. Render Report and Set Total Source Count (Y) ---
+            
+            if (totalDatabaseCount > 0) {
+                 // Use the calculated count of ALL data points for Y
+                 document.getElementById('source-total-count').textContent = totalDatabaseCount;
+            } else {
+                 // Fallback to the total number of items the chatbot sees (if available)
+                 document.getElementById('source-total-count').textContent = totalSources > 0 ? totalSources : 0;
+            }
+            
+            loadingMessage.remove(); 
+            renderReport();
+        }
+
+        // Function to parse the LLM text and make citations clickable
+        function renderChatbotResponse(rawText, targetElement) {
+            const pattern = /(.+?)\[\[(.*?)\]\]/g;
+            let resultHtml = ``; 
+            let lastIndex = 0;
+            let match;
+            
+            if (rawText.includes('Based on the available data no insights are available') || rawText.includes('Chatbot disabled: Raw comment data')) {
+                 targetElement.innerHTML = `<p class="text-gray-500 italic">${rawText}</p>`;
+                 return;
+            }
+
+            resultHtml += `<p class="text-lg leading-relaxed text-white">`;
+
+            while ((match = pattern.exec(rawText)) !== null) {
+                const insightPart = match[1].trim();
+                const rawIds = match[2].trim();
+                
+                resultHtml += insightPart;
+
+                if (rawIds) {
+                    const idList = rawIds.split(',').map(id => id.trim()).filter(id => id);
+                    
+                    // --- Citation Mapping ---
+                    let currentCitationIndex = globalCitationIndex;
+                    let citationNumbers = [];
+
+                    idList.forEach(id => {
+                        // Only increase global index if the ID hasn't been cited before
+                        if (!citedIds.has(id)) {
+                            citationMap[currentCitationIndex] = { id: id };
+                            citationNumbers.push(currentCitationIndex);
+                            citedIds.add(id); // Mark as cited
+                            currentCitationIndex++;
+                        } else {
+                            // If cited, find its existing number
+                            const existingKey = Object.keys(citationMap).find(key => citationMap[key].id === id);
+                            if (existingKey) {
+                                citationNumbers.push(parseInt(existingKey));
+                            }
+                        }
+                    });
+                    
+                    // Update global index to the highest number used + 1
+                    globalCitationIndex = currentCitationIndex;
+
+                    // Update the header count immediately
+                    document.getElementById('source-header-count').textContent = globalCitationIndex - 1;
+
+                    if (citationNumbers.length > 0) {
+                        const startDisplay = Math.min(...citationNumbers);
+                        const endDisplay = Math.max(...citationNumbers);
+                        
+                        citationNumbers.sort((a, b) => a - b); // Sort for clean display
+
+                        // Add the clickable citation link
+                        resultHtml += ` <sup class="citation-link chatbot-citation" data-raw-ids="${idList.join(',').trim()}" onclick="showChatbotCitations(event, '${idList.join(',').trim()}', ${startDisplay}, ${endDisplay})">`;
+                        resultHtml += `[${citationNumbers.join(', ')}]`;
+                        resultHtml += '</sup>';
+                    }
+                }
+                lastIndex = match.index + match[0].length;
+            }
+
+            // Append any remaining text after the last citation
+            resultHtml += rawText.substring(lastIndex).trim();
+
+            resultHtml += '</p>';
+            targetElement.innerHTML = resultHtml;
+        }
+
+        // Function to handle the LLM chatbot query
+        async function queryChatbot() {
+            const promptInput = document.getElementById('prompt-input');
+            const chatHistory = document.getElementById('chatbot-answer');
+            const chatButton = document.getElementById('chat-button');
+            const chatStatus = document.getElementById('chat-status');
+            const userPrompt = promptInput.value.trim();
+            const uniqueId = 'response-' + Date.now();
+
+            if (!userPrompt) {
+                 return;
+            }
+            
+            if (!CHATBOT_ENABLED) {
+                const userHtml = `
+                    <div class="border-t border-gray-900 pt-4 mt-4">
+                        <p class="font-semibold text-red-400">You Asked:</p>
+                        <p class="mb-2 text-gray-300">${userPrompt}</p>
+                        <div id="${uniqueId}" class="pl-2 border-l-4 border-red-600">
+                             <p class="text-red-500">Chatbot disabled: Raw comment data (curated_data_for_llm.json) is missing or failed to load. Cannot ground the answer.</p>
+                        </div>
+                    </div>`;
+                
+                if (chatHistory.querySelector('.italic') && chatHistory.querySelector('.italic').textContent.includes('Ask a question')) {
+                    chatHistory.innerHTML = '';
+                }
+                chatHistory.innerHTML += userHtml;
+                return;
+            }
+            
+            chatButton.disabled = true;
+            chatStatus.classList.remove('hidden');
+
+            // 1. Append User Question to History
+            const userHtml = `
+                <div class="border-t border-gray-900 pt-4 mt-4">
+                    <p class="font-semibold text-red-400">You Asked:</p>
+                    <p class="mb-2 text-gray-300">${userPrompt}</p>
+                    <div id="${uniqueId}" class="pl-2 border-l-4 border-red-600">
+                        <p class="text-gray-500 italic">Analyzing data... please wait.</p>
+                    </div>
+                </div>`;
+            
+            if (chatHistory.querySelector('.italic') && chatHistory.querySelector('.italic').textContent.includes('Ask a question')) {
+                 chatHistory.innerHTML = '';
+            }
+            chatHistory.innerHTML += userHtml;
+            const aiAnswerDiv = document.getElementById(uniqueId);
+
+
+            try {
+                const payload = {
+                    model: MODEL_NAME,
+                    system_instruction: CONSERVATIVE_SYSTEM_PROMPT,
+                    user_prompt: userPrompt,
+                    temperature: 0.0001
+                };
+
+                const response = await fetch(SECURE_API_ENDPOINT, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload),
+                    timeout: 60000 
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text(); 
+                    console.error("Server Response Error Details:", errorText);
+                    throw new Error(`HTTP Error: ${response.status} - ${errorText.substring(0, 50)}...`);
+                }
+
+                const result = await response.json();
+                
+                const analysis = result.analysis || "Error: Proxy returned invalid response structure.";
+
+                renderChatbotResponse(analysis, aiAnswerDiv);
+
+                const firstCitation = aiAnswerDiv.querySelector('.chatbot-citation');
+                if (firstCitation) {
+                     firstCitation.click();
+                }
+
+                promptInput.value = ''; 
+
+            } catch (error) {
+                console.error("Chatbot API Error:", error);
+                aiAnswerDiv.innerHTML = `<p class="text-red-500">Error connecting to the analysis engine: ${error.message}</p>`;
+            } finally {
+                chatButton.disabled = false;
+                chatStatus.classList.add('hidden');
+            }
+        }
+
+        // Function to render the chatbot's citations (fetches live data from proxy)
+        async function showChatbotCitations(event, rawIdsString, start, end) {
+            document.querySelectorAll('.citation-link').forEach(link => {
+                link.classList.remove('bg-red-700', 'text-white'); 
+            });
+            event.currentTarget.classList.add('bg-red-700', 'text-white'); 
+            
+            const citationDetails = document.getElementById('citation-details');
+            const placeholder = document.getElementById('citation-placeholder');
+            const layoutWrapper = document.getElementById('content-layout-wrapper');
+
+            // 1. Enable Two-Column Layout
+            layoutWrapper.classList.add('show-sidebar');
+            
+            // 2. Hide Placeholder
+            if (placeholder) {
+                placeholder.style.display = 'none';
+            }
+            
+            citationDetails.innerHTML = `<p class="text-center p-4 text-red-400">Fetching live sources (requires Python server)...</p>`;
+            
+            const idList = rawIdsString.split(',');
+
+            try {
+                const response = await fetch(COMMENT_DETAILS_ENDPOINT, { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ citation_ids: idList }) 
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text(); 
+                    console.error("Comment Fetch Error:", errorText);
+                    throw new Error(`Could not fetch comment details from backend. Status: ${response.status}`);
+                }
+
+                const citations = await response.json(); 
+                let newHtml = '';
+
+                if (citations.length === 0) {
+                     newHtml = '<p class="text-gray-500 italic p-4">No comments were found in the database for the LLM\'s citations.</p>';
+                } else {
+                    citations.forEach((citation, index) => {
+                        // Find the existing global citation number for display
+                        const citationNumber = Object.keys(citationMap).find(key => citationMap[key].id === citation.id);
+                        
+                        // Check if the source is 'App Store' or 'Google Play' (both have platform names starting with 'App') to hide the link
+                        const linkClass = citation.source_platform.includes('App') ? 'original-link hide-original-link' : 'original-link';
+                        
+                        // Check for the correct property name: citation.date (lowercase 'd')
+                        const dateDisplay = citation.date ? `<span class="ml-2 text-gray-500">(${citation.date.split(' ')[0]})</span>` : '';
+
+                        newHtml += `
+                            <div class="source-card bg-black p-3 rounded-lg shadow-sm">
+                                <p class="text-xs font-mono text-red-400 mb-2">
+                                    Source [${citationNumber}] 
+                                    <span class="inline-block px-1 ml-1 bg-red-800 rounded text-red-300">${citation.source_platform}</span>
+                                    ${dateDisplay} </p>
+                                
+                                <p class="comment-body mb-2 italic text-gray-200">"${citation.comment_text}"</p>
+                                
+                                <a href="${citation.comment_url}" target="_blank" rel="noopener noreferrer" class="text-xs ${linkClass}">
+                                    View original conversation &#x2197;
+                                </a>
+                            </div>
+                        `;
+                    });
+                }
+                
+                citationDetails.innerHTML = newHtml;
+
+            } catch (error) {
+                citationDetails.innerHTML = `<p class="text-red-500">Error retrieving source comments: ${error.message}</p>`;
+            }
+        }
+
+
+        // Function to render the main report insights 
+        function renderReport() {
+            const insightsContent = document.getElementById('insights-content');
+            insightsContent.innerHTML = '';
+            
+            REPORT_DATA.forEach((block, insightIndex) => {
+                let insightHtml = `<p class="text-lg mb-6 leading-relaxed text-white">`;
+                
+                const insightText = block.insight.trim() + '.'; 
+                const totalCitations = block.citations.length;
+                
+                if (totalCitations > 0) {
+                    
+                    let citationNumbers = [];
+                    let currentCitationIndex = globalCitationIndex;
+                    
+                    block.citations.forEach(citation => {
+                        const id = citation.id;
+                        if (!citedIds.has(id)) {
+                            citationMap[currentCitationIndex] = { id: id };
+                            citedIds.add(id);
+                            citationNumbers.push(currentCitationIndex);
+                            currentCitationIndex++;
+                        } else {
+                            const existingKey = Object.keys(citationMap).find(key => citationMap[key].id === id);
+                            if (existingKey) {
+                                citationNumbers.push(parseInt(existingKey));
+                            }
+                        }
+                    });
+                    
+                    globalCitationIndex = currentCitationIndex;
+                    
+                    citationNumbers = [...new Set(citationNumbers)].sort((a, b) => a - b);
+
+                    const textWithoutFinalDot = insightText.slice(0, -1);
+
+                    insightHtml += textWithoutFinalDot;
+
+                    insightHtml += ` <sup class="citation-link" data-insight-index="${insightIndex}" onclick="showCitations(event, ${insightIndex}, 0, ${totalCitations})">`;
+                    insightHtml += `[${citationNumbers.join(', ')}]`;
+                    insightHtml += '</sup>';
+                    
+                    insightHtml += '.';
+                } else {
+                    insightHtml += insightText;
+                }
+
+                insightHtml += '</p>';
+                insightsContent.innerHTML += insightHtml;
+            });
+            
+            document.getElementById('source-header-count').textContent = globalCitationIndex - 1;
+        }
+
+        // Function to display source comments in the sidebar
+        function showCitations(event, insightIndex, start, end) {
+            document.querySelectorAll('.citation-link').forEach(link => {
+                link.classList.remove('bg-red-700', 'text-white'); 
+            });
+            event.currentTarget.classList.add('bg-red-700', 'text-white'); 
+
+            const citationDetails = document.getElementById('citation-details');
+            const placeholder = document.getElementById('citation-placeholder');
+            const layoutWrapper = document.getElementById('content-layout-wrapper');
+
+            // 1. Enable Two-Column Layout
+            layoutWrapper.classList.add('show-sidebar');
+            
+            // 2. Hide Placeholder
+            if (placeholder) {
+                placeholder.style.display = 'none';
+            }
+
+            let newHtml = '';
+            const citations = REPORT_DATA[insightIndex].citations;
+            
+            if (citations.length === 0) {
+                newHtml = '<p class="text-gray-500 italic p-4">No comments found for this insight.</p>';
+            } else {
+                for (let i = start; i < end; i++) {
+                    const citation = citations[i];
+                    const citationNumber = Object.keys(citationMap).find(key => citationMap[key].id === citation.id);
+
+                    // Check if the source is 'App Store' or 'Google Play' (both have platform names starting with 'App') to hide the link
+                    const linkClass = citation.source_platform.includes('App') || citation.source_platform.includes('Google Play') ? 'original-link hide-original-link' : 'original-link';
+
+                    const dateDisplay = citation.date ? `<span class="ml-2 text-gray-500">(${citation.date.split(' ')[0]})</span>` : '';
+                
+                    newHtml += `
+                        <div class="source-card bg-black p-3 rounded-lg shadow-sm">
+                            <p class="text-xs font-mono text-red-400 mb-2">
+                                Source [${citationNumber}] 
+                                <span class="inline-block px-1 ml-1 bg-red-800 rounded text-red-300">${citation.source_platform}</span>
+                                ${dateDisplay} </p>
+                            
+                            <p class="comment-body mb-2 italic text-gray-200">"${citation.comment_text}"</p>
+                            
+                            <a href="${citation.comment_url}" target="_blank" rel="noopener noreferrer" class="text-xs ${linkClass}">
+                                View original conversation &#x2197;
+                            </a>
+                        </div>
+                    `;
+                }
+            }
+            
+            citationDetails.innerHTML = newHtml;
+
+            if (window.innerWidth < 768) {
+                document.getElementById('sources-panel').scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+             const promptInput = document.getElementById('prompt-input');
+             // Event listener to trigger queryChatbot on Enter (but not Shift+Enter)
+             promptInput.addEventListener('keypress', function (e) {
+                 if (e.key === 'Enter' && !e.shiftKey) {
+                     e.preventDefault(); // Stop the textarea from creating a new line
+                     queryChatbot();
+                 }
+             });
+
+             // Start the data fetch process
+             fetchReportData();
+        });
+    </script>
+</body>
+</html>

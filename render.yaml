@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: economist-feedback-tool
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn api_proxy:app
+    envVars:
+      - key: PERSISTENT_STORAGE_PATH
+        value: /var/lib/data
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: YOUTUBE_API_KEY
+        sync: false
+      - key: REDDIT_CLIENT_ID
+        sync: false
+      - key: REDDIT_CLIENT_SECRET
+        sync: false
+    disk:
+      name: feedback-data
+      mountPath: /var/lib/data
+      sizeGB: 1

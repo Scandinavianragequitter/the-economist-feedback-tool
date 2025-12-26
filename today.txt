@@ -1,0 +1,26 @@
+1. fix nl2sql 
+2. add spotify comments
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1. deploy as website 
+
+
+
+5. make it actually automated ... get new data daily, update by itself...
+
+
+

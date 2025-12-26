@@ -1,0 +1,18 @@
+
+
+1. hallucination 
+2. citing of comments that don't relate to the aspect
+
+3. have the whole thing update via one control script
+4. give sub headlines to each insight
+5. format everything nicely 
+6. integrate LinkedIn 
+7. source not found in database for displaying on web
+8. filter comments by topic and display them
+9. present reddit convos 
+10. add suggestions for prompting the ai
+11. add spotify comments data
+
+
+Goals: 
+List mode; list data by topic 

@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audience Insights - Saved Comments</title>
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            /* COLORS */
+            --primary-red: #E3120B; 
+            --bg-white: #FFFFFF;
+            --text-black: #111111;
+            --header-bg: #000000;
+            --header-text: #FFFFFF;
+            
+            /* SIZES */
+            --header-height: 8rem;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-white);
+            color: var(--text-black);
+            margin: 0;
+            padding: 0;
+            overflow: hidden; 
+        }
+
+        /* --- HEADER --- */
+        #main-header {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: var(--header-height); 
+            background-color: var(--header-bg);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 0 2rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 60%;
+            border-bottom: 1px solid #333;
+        }
+        
+        .nav-icon-btn {
+            background: none; border: none; cursor: pointer; padding: 0;
+            display: flex; align-items: center; justify-content: center;
+            transition: transform 0.2s;
+        }
+        .nav-icon-btn:hover { transform: scale(1.1); }
+
+        .icon-svg {
+            width: 28px; height: 28px;
+            stroke: var(--primary-red);
+            stroke-width: 2.5;
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .nav-icon-btn.active .icon-svg {
+            stroke: #fff; 
+        }
+
+        .header-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--header-text);
+            letter-spacing: -0.02em;
+            text-decoration: none;
+            transition: opacity 0.2s;
+        }
+        .header-title:hover { opacity: 0.8; }
+
+        .header-actions {
+            height: 40%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2rem;
+        }
+
+        .download-btn {
+            background-color: #333;
+            color: white;
+            border: 1px solid #444;
+            padding: 0.4rem 1.2rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .download-btn:hover {
+            background-color: var(--primary-red);
+            border-color: var(--primary-red);
+        }
+
+        /* --- MAIN LAYOUT --- */
+        #dashboard-container {
+            padding-top: var(--header-height); 
+            height: 100vh;
+            width: 100vw;
+            /* UPDATED: Centered container with responsive margins for the grid */
+            display: flex;
+            justify-content: center;
+            overflow: hidden;
+            background-color: #fff;
+        }
+
+        /* --- SCROLLER AREA --- */
+        #saved-scroller {
+            height: 100%;
+            width: 100%;
+            max-width: 1200px; /* Max width for the "comic book" page */
+            overflow-y: auto;
+            overflow-x: hidden; 
+            
+            padding-top: 3rem; 
+            padding-bottom: 10rem;
+            padding-left: 2rem;
+            padding-right: 2rem;
+            
+            /* Hide Scrollbar */
+            -ms-overflow-style: none;  
+            scrollbar-width: none; 
+        }
+        #saved-scroller::-webkit-scrollbar { display: none; }
+
+        /* --- COMIC GRID LAYOUT --- */
+        #saved-list-container {
+            display: grid;
+            /* Two columns (half size), responsive */
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 1.5rem;
+            align-items: stretch; /* Make panels equal height in a row */
+        }
+
+        /* --- COMMENT CARD STYLING --- */
+        .saved-card {
+            background: #f9fafb; 
+            border: 1px solid #e5e7eb;
+            padding: 1.5rem;
+            border-radius: 8px;
+            
+            /* Grid Item Properties */
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 100%; /* Fill the grid cell */
+            
+            border-left: 4px solid var(--primary-red);
+            font-size: 0.95rem; /* Slightly smaller font for density */
+            color: #374151;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            transition: transform 0.2s, box-shadow 0.2s;
+            position: relative;
+        }
+        
+        .saved-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            z-index: 10; /* Pop out effect */
+        }
+
+        .saved-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.7rem;
+            color: #9ca3af;
+            margin-bottom: 0.8rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+        }
+
+        .saved-text {
+            font-style: italic;
+            line-height: 1.5;
+            color: #111;
+            flex-grow: 1; /* Pushes the footer to the bottom */
+            margin-bottom: 1rem;
+        }
+
+        .empty-state {
+            grid-column: 1 / -1; /* Span full width */
+            text-align: center;
+            color: #9ca3af;
+            margin-top: 5rem;
+            font-size: 1.1rem;
+        }
+        
+        .card-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid #eee;
+            margin-top: auto; /* Ensure it stays at bottom */
+        }
+
+    </style>
+</head>
+<body>
+
+    <header id="main-header">
+        <div class="header-top">
+            <a href="question.html" class="nav-icon-btn" title="Back to Questions">
+                <svg class="icon-svg" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+            </a>
+            
+            <a href="final_design.html" class="header-title">Audience Feedback</a>
+            
+            <div class="flex items-center" style="gap: 1rem;"> 
+                
+                <a href="final_design.html" class="nav-icon-btn" title="Dashboard">
+                    <svg class="icon-svg" viewBox="0 0 24 24">
+                        <line x1="4" y1="6" x2="20" y2="6"></line>
+                        <line x1="4" y1="10" x2="20" y2="10"></line>
+                        <line x1="4" y1="14" x2="20" y2="14"></line>
+                        <line x1="4" y1="18" x2="20" y2="18"></line>
+                    </svg>
+                </a>
+                
+                <a href="comment_filter.html" class="nav-icon-btn" title="Search Filter">
+                    <svg class="icon-svg" viewBox="0 0 24 24">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                </a>
+            </div>
+        </div>
+        
+        <div class="header-actions">
+            <button onclick="downloadPDF()" class="download-btn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                Download PDF
+            </button>
+        </div>
+    </header>
+
+    <div id="dashboard-container">
+        <div id="saved-scroller">
+            <div id="saved-list-container">
+                <p class="text-center text-gray-400 mt-20 w-full col-span-2">Loading saved comments...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            renderSavedComments();
+        });
+
+        // --- LOCAL STORAGE LOGIC ---
+
+        function getSavedComments() {
+            const saved = localStorage.getItem('savedComments');
+            return saved ? JSON.parse(saved) : {};
+        }
+
+        function saveComments(commentsObject) {
+            localStorage.setItem('savedComments', JSON.stringify(commentsObject));
+        }
+
+        function removeComment(key) {
+            let saved = getSavedComments();
+            if (saved.hasOwnProperty(key)) {
+                delete saved[key];
+                saveComments(saved);
+                renderSavedComments(); 
+            }
+        }
+
+        // --- COPY TO CLIPBOARD LOGIC ---
+
+        function copyToClipboard(text, btnElement) {
+            navigator.clipboard.writeText(text).then(() => {
+                const originalHtml = btnElement.innerHTML;
+                btnElement.innerHTML = `
+                    <svg style="width: 20px; height: 20px; stroke: #22c55e; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;" viewBox="0 0 24 24">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                `;
+                btnElement.title = "Copied!";
+                
+                setTimeout(() => {
+                    btnElement.innerHTML = originalHtml;
+                    btnElement.title = "Copy text";
+                }, 2000);
+            });
+        }
+
+        // --- PDF DOWNLOAD LOGIC ---
+
+        function downloadPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const saved = getSavedComments();
+            const keys = Object.keys(saved).reverse(); 
+
+            if (keys.length === 0) {
+                alert("No saved comments to download.");
+                return;
+            }
+
+            let y = 20;
+            doc.setFontSize(18);
+            doc.setFont("helvetica", "bold");
+            doc.text("Audience Feedback - Saved Comments", 10, y);
+            y += 15;
+
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+
+            keys.forEach(key => {
+                const item = saved[key];
+                if (y > 270) {
+                    doc.addPage();
+                    y = 20;
+                }
+
+                doc.setFont("helvetica", "bold");
+                doc.setTextColor(227, 18, 11); 
+                doc.text(`${item.platform} | ${item.date}`, 10, y);
+                doc.setTextColor(0, 0, 0); 
+                y += 5;
+
+                doc.setFont("helvetica", "italic");
+                const pageWidth = 190; 
+                const splitText = doc.splitTextToSize(`"${item.text}"`, pageWidth);
+                doc.text(splitText, 10, y);
+                
+                y += (splitText.length * 5) + 10; 
+                
+                doc.setDrawColor(200, 200, 200);
+                doc.line(10, y - 5, 200, y - 5);
+            });
+
+            doc.save("saved_comments.pdf");
+        }
+
+        // --- RENDERING LOGIC ---
+
+        function renderSavedComments() {
+            const container = document.getElementById('saved-list-container');
+            const saved = getSavedComments();
+            const keys = Object.keys(saved);
+
+            container.innerHTML = '';
+
+            if (keys.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <p>No saved comments yet.</p>
+                        <p class="text-sm mt-2">Click the bookmark icon on any comment in the report to save it here.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Reverse to show newest first
+            keys.reverse().forEach(key => {
+                const data = saved[key];
+                
+                let platformName = data.platform || 'Unknown';
+                if(platformName === 'App Store') platformName = 'iOS';
+                
+                const dateStr = data.date ? data.date.split(' ')[0] : 'N/A';
+
+                const card = document.createElement('div');
+                card.className = 'saved-card';
+                
+                const rawText = data.text;
+                const safeText = rawText.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                
+                const safeKey = key.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                const safeRawTextForCopy = rawText.replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/\n/g, ' ');
+
+                card.innerHTML = `
+                    <div class="saved-meta">
+                        <span>${platformName}</span>
+                        <span>${dateStr}</span>
+                    </div>
+                    <div class="saved-text">
+                        "${safeText}"
+                    </div>
+                    
+                    <div class="card-actions">
+                        <a href="${data.url}" target="_blank" class="text-xs text-red-600 font-bold hover:underline uppercase tracking-wide mr-auto">see original &rarr;</a>
+
+                        <button onclick="copyToClipboard('${safeRawTextForCopy}', this)" 
+                                class="nav-icon-btn p-1" 
+                                title="Copy text"
+                                style="transform: scale(0.9);">
+                            <svg style="width: 20px; height: 20px; stroke: #666; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;" viewBox="0 0 24 24">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                            </svg>
+                        </button>
+
+                        <button onclick="removeComment('${safeKey}')" 
+                                class="nav-icon-btn p-1" 
+                                title="Remove from saved" 
+                                style="transform: scale(0.9);">
+                            <svg style="width: 24px; height: 24px; stroke: var(--primary-red); fill: var(--primary-red); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;" viewBox="0 0 24 24">
+                                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path>
+                            </svg>
+                        </button>
+                    </div>
+                `;
+
+                container.appendChild(card);
+            });
+        }
+
+    </script>
+</body>
+</html>

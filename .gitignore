@@ -1,0 +1,16 @@
+# Credentials
+.env
+config/openrouter_config.py
+config/reddit_config.py
+config/youtube_config.py
+
+# Local Data and Databases
+data/*.db
+data/curated_data_for_llm.json
+llm_analysis_output.txt
+report_with_sources.json
+
+# Python artifacts
+__pycache__/
+*.pyc
+.pytest_cache/

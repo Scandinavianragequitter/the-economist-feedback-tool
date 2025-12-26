@@ -1,0 +1,18 @@
+# Web Server & API
+Flask
+flask-cors
+requests
+python-dotenv
+gunicorn
+whitenoise
+
+# Scrapers & Curation
+praw
+google-play-scraper
+app-store-web-scraper
+pandas
+sqlalchemy
+psycopg2-binary
+
+# Analysis
+openai

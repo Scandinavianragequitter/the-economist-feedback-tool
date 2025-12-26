@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audience Insights - Documentation</title>
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            /* COLORS */
+            --primary-red: #E3120B; 
+            --bg-white: #FFFFFF;
+            --text-black: #111111;
+            --header-bg: #000000;
+            --header-text: #FFFFFF;
+            
+            /* SIZES */
+            --header-height: 8rem;
+        }
+
+        /* Lock the entire viewport */
+        html, body {
+            height: 100%;
+            overflow: hidden; /* Prevents all scrolling on the page */
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-white); /* Use the standard white background */
+            color: var(--text-black);
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+        
+        /* --- HEADER STYLES (Matching Dashboard) --- */
+        #main-header {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: var(--header-height); 
+            background-color: var(--header-bg);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 0 2rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 60%;
+            border-bottom: 1px solid #333;
+        }
+        
+        .nav-icon-btn {
+            background: none; border: none; cursor: pointer; padding: 0;
+            display: flex; align-items: center; justify-content: center;
+            transition: transform 0.2s;
+        }
+        .nav-icon-btn:hover { transform: scale(1.1); }
+
+        .icon-svg {
+            width: 28px; height: 28px;
+            stroke: var(--primary-red);
+            stroke-width: 2.5;
+            fill: none;
+            stroke-linecap: round; stroke-linejoin: round;
+        }
+
+        .header-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--header-text);
+            letter-spacing: -0.02em;
+        }
+
+        .header-stats {
+            height: 40%;
+            display: flex; align-items: center; justify-content: center;
+            gap: 2rem;
+            font-size: 0.85rem;
+            color: #888;
+        }
+        .stat-val { color: var(--primary-red); font-weight: 700; margin-left: 0.25rem; }
+        
+        /* --- PAGE CONTENT STYLES (Simplified) --- */
+        #content-wrapper {
+            /* Content now takes the entire remaining screen height */
+            height: calc(100vh - var(--header-height));
+            
+            padding-top: var(--header-height); /* Offset for the fixed header */
+            
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            
+            padding: 12rem 1rem;
+            max-width: 900px; /* Restrict content width */
+            margin: 0 auto; /* Center the content block */
+        }
+        
+        .doc-section {
+            border-left: 4px solid var(--primary-red);
+            padding-left: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .doc-section h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: var(--text-black);
+        }
+        
+        /* Styling for the large text area */
+        .large-text-area {
+            width: 100%;
+            background-color: #f9fafb; /* Light gray background for contrast */
+            border: 1px solid #e5e7eb;
+            padding: 1.5rem;
+            border-radius: 8px;
+            text-align: justify;
+            font-size: 1.1rem;
+            line-height: 1.6;
+            
+            max-height: 100%; 
+            overflow-y: auto; 
+        }
+        
+        /* Style for the linked title */
+        .header-title a {
+            color: var(--header-text);
+            text-decoration: none;
+            transition: color 0.15s;
+        }
+        .header-title a:hover {
+            color: #e5e5e5; /* Slightly lighter white on hover */
+        }
+    </style>
+</head>
+<body>
+
+    <header id="main-header">
+        <div class="header-top">
+            <a href="question.html" class="nav-icon-btn" title="Help">
+                <svg class="icon-svg" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+            </a>
+            
+            <div class="header-title">
+                <a href="final_design.html">Audience Feedback</a>
+            </div>
+            
+            <div class="flex items-center" style="gap: 1rem;"> 
+                <a href="final_design.html" class="nav-icon-btn" title="Dashboard">
+                    <svg class="icon-svg" viewBox="0 0 24 24">
+                        <path d="M4 8 C 6 6, 18 6, 20 8" />
+                        <path d="M4 12 C 6 10, 18 10, 20 12" />
+                        <path d="M4 16 C 6 14, 18 14, 20 16" />
+                    </svg>
+                </a>
+                <a href="saved_comments.html" class="nav-icon-btn" title="View Saved Comments">
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path>
+                    </svg>
+                </a>
+                
+                <a href="comment_filter_view.html" class="nav-icon-btn" title="Search Filter">
+                    <svg class="icon-svg" viewBox="0 0 24 24">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                </a>
+            </div>
+        </div>
+        
+        <div class="header-stats">
+            <span>Reddit: <span id="count-reddit" class="stat-val">--</span></span>
+            <span>YouTube: <span id="count-youtube" class="stat-val">--</span></span>
+            <span>App Store: <span id="count-ios" class="stat-val">--</span></span>
+            <span>Google Play: <span id="count-gp" class="stat-val">--</span></span>
+        </div>
+    </header>
+
+    <div id="content-wrapper">
+        
+      
+
+        <div class="large-text-area">
+            <h2>Dashboard Overview</h2>
+            <p class="mb-4">
+                This is the text area for your documentation. The frame is fixed and the content area below the header will not move, ensuring a completely stable view.
+            </p>
+        </div>
+
+    </div>
+
+    <script>
+        // Script to fetch source counts from the backend API (Required for the header stats)
+        const API_BASE_URL = "http://127.0.0.1:5000"; 
+        const COUNT_ENDPOINT = API_BASE_URL + "/api/source_counts";
+        
+        async function loadSourceCounts() {
+            try {
+                const response = await fetch(COUNT_ENDPOINT);
+                if (response.ok) {
+                    const counts = await response.json();
+                    document.getElementById('count-reddit').textContent = counts['Reddit'] || 0;
+                    document.getElementById('count-youtube').textContent = counts['YouTube'] || 0;
+                    document.getElementById('count-ios').textContent = counts['iOS'] || 0;
+                    document.getElementById('count-gp').textContent = counts['GP'] || 0;
+                } else {
+                    console.warn(`Failed to fetch source counts: HTTP status ${response.status}`);
+                }
+            } catch (e) { 
+                console.warn("Error loading source counts:", e);
+                document.getElementById('count-reddit').textContent = 0;
+                document.getElementById('count-youtube').textContent = 0;
+                document.getElementById('count-ios').textContent = 0;
+                document.getElementById('count-gp').textContent = 0;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadSourceCounts);
+    </script>
+</body>
+</html>

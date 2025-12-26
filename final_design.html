@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audience Insights - Dashboard</title>
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            /* COLORS */
+            --primary-red: #E3120B; 
+            --bg-white: #FFFFFF;
+            --text-black: #111111;
+            --header-bg: #000000;
+            --header-text: #FFFFFF;
+            
+            /* SIZES */
+            --text-block-width: 520px; 
+            --column-width: 800px;     
+            --dot-size: 16px;
+            --header-height: 8rem;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-white);
+            color: var(--text-black);
+            margin: 0;
+            padding: 0;
+            overflow: hidden; 
+        }
+
+        /* --- HEADER --- */
+        #main-header {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: var(--header-height); 
+            background-color: var(--header-bg);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 0 2rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 60%;
+            border-bottom: 1px solid #333;
+        }
+        
+        .nav-icon-btn {
+            background: none; border: none; cursor: pointer; padding: 0;
+            display: flex; align-items: center; justify-content: center;
+            transition: transform 0.2s;
+        }
+        .nav-icon-btn:hover { transform: scale(1.1); }
+
+        .icon-svg {
+            width: 28px; height: 28px;
+            stroke: var(--primary-red);
+            stroke-width: 2.5;
+            fill: none;
+            stroke-linecap: round; stroke-linejoin: round;
+        }
+
+        .header-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--header-text);
+            letter-spacing: -0.02em;
+        }
+
+        .header-stats {
+            height: 40%;
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            gap: 2rem;
+            font-size: 0.85rem;
+            color: #888;
+        }
+        /* REMOVED custom #stats-description style */
+        .stat-val { color: var(--primary-red); font-weight: 700; margin-left: 0.25rem; }
+
+        /* --- MAIN LAYOUT --- */
+        #dashboard-container {
+            padding-top: var(--header-height); 
+            height: 100vh;
+            width: 100vw;
+            display: grid;
+            /* 15% Spacer | 800px Report | 1fr Sidebar */
+            grid-template-columns: 15% var(--column-width) 1fr;
+            gap: 0; 
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* --- REPORT SCROLLER --- */
+        #report-scroller {
+            height: 100%;
+            overflow-y: auto;
+            overflow-x: hidden; 
+            
+            scroll-snap-type: y mandatory; 
+            scroll-behavior: smooth;
+            
+            -ms-overflow-style: none;  
+            scrollbar-width: none; 
+            
+            /* Vertical Alignment Logic (Same as before) */
+            padding-top: calc(50vh - 4rem - 100px); 
+            padding-bottom: calc(50vh - 4rem - 100px);
+            
+            padding-right: 150px; 
+            
+            position: relative;
+            z-index: 50; 
+        }
+        #report-scroller::-webkit-scrollbar { display: none; }
+
+        /* Insight Card */
+        .insight-card {
+            width: var(--text-block-width);
+            margin-left: 2rem; 
+            margin-bottom: 35vh; 
+            
+            position: relative;
+            padding-left: 3rem; 
+            
+            scroll-snap-align: center;
+            
+            opacity: 0.4;
+            transform: scale(0.95); 
+            transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1); 
+            
+            font-size: 1.15rem;
+            line-height: 1.7;
+            text-align: justify; 
+            color: #333;
+            z-index: 51; 
+        }
+
+        .insight-card.active {
+            opacity: 1;
+            transform: scale(1.1); 
+            font-weight: 600; 
+            color: black;
+        }
+
+        /* Red Dot */
+        .red-dot {
+            position: absolute;
+            left: 0;
+            top: 50%; 
+            transform: translateY(-50%); 
+            width: var(--dot-size);
+            height: var(--dot-size);
+            background-color: var(--primary-red);
+            border-radius: 50%;
+            z-index: 60; 
+            transition: transform 0.4s ease;
+        }
+        
+        .insight-card.active .red-dot {
+            transform: translateY(-50%) scale(1.3); 
+            
+        }
+
+        /* Connector Curves - (CSS kept for reference, but elements won't be created) */
+        .connector-curve {
+            position: absolute;
+            right: -100px; 
+            top: 50%;
+            transform: translateY(-50%);
+            width: 60px;
+            height: 140px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.4s ease 0.1s;
+            z-index: 55; 
+        }
+        
+        .insight-card.active .connector-curve {
+            opacity: 1;
+        }
+
+        /* --- SIDEBAR (Right) --- */
+        #sidebar-container {
+            /* [FIXED VERTICAL ALIGNMENT] 
+               Removed manual padding-top.
+               Using Flexbox to perfectly center content vertically.
+            */
+            height: 100%; /* Fill the column height */
+            display: flex;
+            flex-direction: column;
+            justify-content: center; /* CENTERS CONTENT VERTICALLY */
+            
+            padding-left: 1rem; 
+            padding-right: 3rem;
+            
+            opacity: 0;
+            transform: translateX(10px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            
+            z-index: 10; 
+        }
+
+        #sidebar-container.visible {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        
+        #sidebar-content {
+             /* Limit height to keep it centered and readable */
+             max-height: 70vh;
+             overflow-y: auto;
+             padding: 10px; 
+             -ms-overflow-style: none;  
+             scrollbar-width: none; 
+        }
+        #sidebar-content::-webkit-scrollbar { display: none; }
+
+        .source-card {
+            background: #f9fafb; 
+            border: 1px solid #e5e7eb;
+            padding: 1.2rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            border-left: 4px solid var(--primary-red);
+            font-size: 0.95rem;
+            color: #374151;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+            transition: transform 0.2s;
+        }
+        .source-card:hover {
+            transform: translateX(5px);
+        }
+        
+        .source-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.7rem;
+            color: #9ca3af;
+            margin-bottom: 0.6rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+        }
+
+    </style>
+</head>
+<body>
+
+    <header id="main-header">
+        <div class="header-top">
+            <a href="question.html" class="nav-icon-btn" title="Questions">
+                <svg class="icon-svg" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+            </a>
+            
+            <div class="header-title">Audience Feedback</div>
+            
+            <div class="flex items-center" style="gap: 1rem;"> 
+                <a href="saved_comments.html" class="nav-icon-btn" title="View Saved Comments">
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path>
+                    </svg>
+                </a>
+                
+                <a href="comment_filter.html" class="nav-icon-btn" title="Search Filter">
+                    <svg class="icon-svg" viewBox="0 0 24 24">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                </a>
+            </div>
+        </div>
+        
+        <div class="header-stats">
+            <span style="color: #888; font-size: 0.85rem; margin-right: 1rem;">Relevant comments this month</span>
+            <span>Reddit: <span id="count-reddit" class="stat-val">--</span></span>
+            <span>YouTube: <span id="count-youtube" class="stat-val">--</span></span>
+            <span>App Store: <span id="count-ios" class="stat-val">--</span></span>
+            <span>Google Play: <span id="count-gp" class="stat-val">--</span></span>
+        </div>
+    </header>
+
+    <div id="dashboard-container">
+        
+        <div></div>
+
+        <div id="report-scroller">
+            <div id="insights-list">
+                <p class="text-center text-gray-400 mt-20">Loading insights...</p>
+            </div>
+        </div>
+
+        <div id="sidebar-container">
+            
+            <div id="sidebar-content"></div>
+        </div>
+
+    </div>
+
+    <script>
+        const API_BASE_URL = "http://127.0.0.1:5000"; 
+        const REPORT_ENDPOINT = "report_with_sources.json";
+        const COUNT_ENDPOINT = API_BASE_URL + "/api/source_counts";
+        
+        let REPORT_DATA = [];
+        let observer;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadSourceCounts();
+            await loadReport();
+        });
+
+        // --- LOCAL STORAGE & BOOKMARK LOGIC ---
+
+        function getSavedComments() {
+            const saved = localStorage.getItem('savedComments');
+            return saved ? JSON.parse(saved) : {};
+        }
+
+        function saveComments(commentsObject) {
+            localStorage.setItem('savedComments', JSON.stringify(commentsObject));
+        }
+
+        function isCommentSaved(commentText) {
+            const saved = getSavedComments();
+            // Use comment text as the key for uniqueness, stripping quotes added in HTML
+            return saved.hasOwnProperty(commentText.trim().replace(/^"|"$/g, ''));
+        }
+
+        function getBookmarkIconHtml(citation) {
+            // Text to be used as key in local storage (must match the displayed text)
+            const commentText = citation.comment_text.trim();
+            const isSaved = isCommentSaved(commentText);
+            
+            // Build a small, robust object to save
+            const commentData = {
+                text: commentText,
+                url: citation.comment_url,
+                platform: citation.source_platform,
+                date: citation.date,
+                id: citation.id
+            };
+            // Stringify and escape for safe use in onclick attribute
+            const dataStr = JSON.stringify(commentData).replace(/'/g, '&#39;'); 
+
+            // Dynamic styling based on save state
+            const iconColor = isSaved ? 'var(--primary-red)' : 'grey';
+            const iconFill = isSaved ? 'var(--primary-red)' : 'none';
+            const titleText = isSaved ? 'Remove from saved' : 'Save this comment';
+
+            // Use inline styles to adjust the bookmark button size and position relative to the text
+            return `
+                <button onclick='toggleSaveComment(${dataStr}); event.stopPropagation();' 
+                        class="nav-icon-btn p-1 transition duration-200" title="${titleText}" style="transform: scale(0.7); margin-right: -10px;">
+                    <svg class="bookmark-icon" style="width: 28px; height: 28px; stroke: ${iconColor}; fill: ${iconFill}; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;" viewBox="0 0 24 24">
+                        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path>
+                    </svg>
+                </button>
+            `;
+        }
+        
+        function updateBookmarkIconInCard(card) {
+            const textElement = card.querySelector('.text-black.italic');
+            const bookmarkIcon = card.querySelector('.bookmark-icon');
+            const bookmarkButton = bookmarkIcon ? bookmarkIcon.parentElement : null;
+            
+            if (textElement && bookmarkIcon) {
+                const cardText = textElement.textContent.trim().replace(/^"|"$/g, '');
+                const isSaved = isCommentSaved(cardText);
+                
+                const iconColor = isSaved ? 'var(--primary-red)' : 'grey';
+                const iconFill = isSaved ? 'var(--primary-red)' : 'none';
+                const titleText = isSaved ? 'Remove from saved' : 'Save this comment';
+
+                bookmarkIcon.style.stroke = iconColor;
+                bookmarkIcon.style.fill = iconFill;
+                if (bookmarkButton) bookmarkButton.title = titleText;
+            }
+        }
+
+        function updateAllBookmarkIcons() {
+            // Give it a small delay for DOM rendering
+            setTimeout(() => {
+                document.querySelectorAll('.source-card').forEach(updateBookmarkIconInCard);
+            }, 50);
+        }
+
+        function toggleSaveComment(commentData) {
+            let saved = getSavedComments();
+            const key = commentData.text; // Use comment text as the key
+
+            if (saved.hasOwnProperty(key)) {
+                // Remove comment
+                delete saved[key];
+            } else {
+                // Add comment
+                saved[key] = commentData;
+            }
+            
+            saveComments(saved);
+            updateAllBookmarkIcons(); // Refresh all visible icons
+        }
+
+        // --- CORE DASHBOARD LOGIC (Original) ---
+
+        async function loadSourceCounts() {
+            try {
+                const response = await fetch(COUNT_ENDPOINT);
+                if (response.ok) {
+                    const counts = await response.json();
+                    document.getElementById('count-reddit').textContent = counts['Reddit'] || 0;
+                    document.getElementById('count-youtube').textContent = counts['YouTube'] || 0;
+                    document.getElementById('count-ios').textContent = counts['iOS'] || 0;
+                    document.getElementById('count-gp').textContent = counts['GP'] || 0;
+                }
+            } catch (e) { console.warn("Counts failed", e); }
+        }
+
+        async function loadReport() {
+            try {
+                const response = await fetch(REPORT_ENDPOINT);
+                if (!response.ok) throw new Error("Failed to load report json");
+                REPORT_DATA = await response.json();
+                renderRevolver(REPORT_DATA);
+            } catch (e) {
+                document.getElementById('insights-list').innerHTML = `<p class="text-center text-red-500">Error loading report: ${e.message}</p>`;
+            }
+        }
+
+        function renderRevolver(data) {
+            const container = document.getElementById('insights-list');
+            container.innerHTML = ''; 
+
+            data.forEach((item, index) => {
+                const card = document.createElement('div');
+                card.className = 'insight-card';
+                card.dataset.index = index; 
+                
+                const dot = document.createElement('div');
+                dot.className = 'red-dot';
+                
+                /* --- CURVE GENERATION DEACTIVATED ---
+                const curves = document.createElement('div');
+                curves.className = 'connector-curve';
+                curves.innerHTML = `
+                    <svg width="60" height="140" viewBox="0 0 60 140" fill="none">
+                        <path d="M0 20 Q 30 20 50 0" stroke="#E3120B" stroke-width="2" stroke-linecap="round" />
+                        <path d="M0 120 Q 30 120 50 140" stroke="#E3120B" stroke-width="2" stroke-linecap="round" />
+                    </svg>
+                `;
+                */
+
+                const text = document.createElement('div');
+                text.textContent = item.insight; 
+                
+                card.appendChild(dot);
+                // card.appendChild(curves); // Not appending curves
+                card.appendChild(text);
+                container.appendChild(card);
+            });
+
+            initObserver();
+            
+            setTimeout(() => {
+                const firstCard = document.querySelector('.insight-card');
+                if (firstCard) setActiveInsight(firstCard);
+            }, 100);
+        }
+
+        function initObserver() {
+            const scroller = document.getElementById('report-scroller');
+            const cards = document.querySelectorAll('.insight-card');
+
+            const options = {
+                root: scroller,
+                rootMargin: '-50% 0px -50% 0px', 
+                threshold: 0.0 
+            };
+
+            observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        setActiveInsight(entry.target);
+                    } else {
+                        entry.target.classList.remove('active');
+                    }
+                });
+            }, options);
+
+            cards.forEach(card => observer.observe(card));
+        }
+
+        function setActiveInsight(card) {
+            document.querySelectorAll('.insight-card').forEach(c => c.classList.remove('active'));
+            card.classList.add('active');
+
+            const index = card.dataset.index;
+            const data = REPORT_DATA[index];
+            updateSidebar(data ? data.citations : []);
+        }
+
+        function updateSidebar(citations) {
+            const sidebar = document.getElementById('sidebar-container');
+            const content = document.getElementById('sidebar-content');
+            
+            sidebar.classList.remove('visible');
+            
+            setTimeout(() => {
+                content.innerHTML = '';
+                
+                if (!citations || citations.length === 0) {
+                    content.innerHTML = '<p class="text-gray-300 italic text-sm">No direct citations linked.</p>';
+                } else {
+                    citations.forEach(c => {
+                        let platformName = c.source_platform;
+                        if(platformName === 'App Store') platformName = 'iOS';
+                        if(platformName === 'Google Play') platformName = 'Google Play';
+                        
+                        const dateStr = c.date ? c.date.split(' ')[0] : 'Recent';
+                        
+                        // NEW: Generate bookmark icon HTML
+                        const bookmarkHtml = getBookmarkIconHtml(c);
+
+                        const html = `
+                            <div class="source-card">
+                                <div class="source-meta">
+                                    <span>${platformName}</span>
+                                    <span>${dateStr}</span>
+                                </div>
+                                <div class="text-black italic leading-relaxed">
+                                    "${c.comment_text}"
+                                </div>
+                                <div class="flex justify-between items-center mt-3">
+                                    <a href="${c.comment_url}" target="_blank" class="text-xs text-red-600 font-bold hover:underline uppercase tracking-wide">see original&rarr;</a>
+                                    ${bookmarkHtml} 
+                                </div>
+                            </div>
+                        `;
+                        content.innerHTML += html;
+                    });
+                }
+                
+                sidebar.classList.add('visible');
+                updateAllBookmarkIcons(); // NEW: Update icons after rendering
+            }, 150); 
+        }
+
+    </script>
+</body>
+</html>
