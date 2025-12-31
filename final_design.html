@@ -7,196 +7,218 @@
     <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    
     <style>
         :root {
             --primary-red: #E3120B; 
+            --bg-white: #FFFFFF;
+            --text-black: #111111;
             --header-bg: #000000;
+            --header-text: #FFFFFF;
+            --text-block-width: 520px; 
+            --column-width: 800px;     
+            --dot-size: 16px;
             --header-height: 8rem;
-            --text-block-width: 580px; 
-            --sidebar-width: 480px;
         }
 
-        body { font-family: 'Inter', sans-serif; background-color: #FFF; color: #111; margin: 0; padding: 0; overflow: hidden; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-white); color: var(--text-black); margin: 0; padding: 0; overflow: hidden; }
 
         /* --- HEADER --- */
         #main-header { position: fixed; top: 0; left: 0; right: 0; height: var(--header-height); background-color: var(--header-bg); z-index: 100; display: flex; flex-direction: column; justify-content: space-between; padding: 0 2rem; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
         .header-top { display: flex; justify-content: space-between; align-items: center; height: 60%; border-bottom: 1px solid #333; }
-        .nav-icon-btn { background: none; border: none; cursor: pointer; display: flex; align-items: center; transition: transform 0.2s; }
+        .nav-icon-btn { background: none; border: none; cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; transition: transform 0.2s; }
         .nav-icon-btn:hover { transform: scale(1.1); }
         .icon-svg { width: 28px; height: 28px; stroke: var(--primary-red); stroke-width: 2.5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
-        .header-title { font-size: 1.5rem; font-weight: 700; color: #FFF; letter-spacing: -0.02em; }
-        .header-stats { height: 40%; display: flex; align-items: center; justify-content: center; gap: 2rem; font-size: 0.85rem; color: #888; }
-        .stat-val { color: var(--primary-red); font-weight: 700; margin-left: 0.25rem; }
+        .header-title { font-size: 1.5rem; font-weight: 700; color: var(--header-text); letter-spacing: -0.02em; }
+
+        /* --- TOPIC NAVIGATION --- */
+        .header-stats { 
+            height: 40%; display: flex; align-items: center; justify-content: center; gap: 1.5rem; 
+            font-size: 0.75rem; color: #888; overflow-x: auto; white-space: nowrap; padding: 0 1rem;
+        }
+        .header-stats::-webkit-scrollbar { display: none; }
+        .nav-topic-link {
+            color: #888; text-transform: uppercase; font-weight: 700; border: none; background: none;
+            cursor: pointer; transition: color 0.2s; letter-spacing: 0.05em;
+        }
+        .nav-topic-link:hover { color: var(--primary-red); }
+        .nav-topic-link.active { color: #FFF; border-bottom: 2px solid var(--primary-red); padding-bottom: 2px; }
 
         /* --- LAYOUT --- */
-        #dashboard-container { 
-            padding-top: var(--header-height); 
-            height: 100vh; 
-            width: 100vw; 
-            display: grid; 
-            grid-template-columns: 8% 1fr var(--sidebar-width); 
-            overflow: hidden; 
-        }
-
-        /* --- SCROLLER --- */
-        #report-scroller { height: 100%; overflow-y: auto; scroll-snap-type: y proximity; scroll-behavior: smooth; scrollbar-width: none; -ms-overflow-style: none; }
+        #dashboard-container { padding-top: var(--header-height); height: 100vh; width: 100vw; display: grid; grid-template-columns: 15% var(--column-width) 1fr; overflow: hidden; position: relative; }
+        #report-scroller { height: 100%; overflow-y: auto; scroll-snap-type: y proximity; scroll-behavior: smooth; scrollbar-width: none; position: relative; z-index: 50; }
         #report-scroller::-webkit-scrollbar { display: none; }
-        
         .scroll-spacer { height: 45vh; width: 100%; }
 
-        .insight-card {
-            width: var(--text-block-width); margin: 0 auto 35vh auto; position: relative; padding-left: 3rem; scroll-snap-align: center;
-            opacity: 0.3; transform: scale(0.95); transition: all 0.4s cubic-bezier(0.2, 1, 0.3, 1); color: #333;
-        }
-        .insight-card.active { opacity: 1; transform: scale(1.02); color: #000; }
+        .insight-card { width: var(--text-block-width); margin: 0 auto 35vh auto; position: relative; padding-left: 3rem; scroll-snap-align: center; opacity: 0.4; transform: scale(0.95); transition: all 0.4s ease; color: #333; z-index: 51; }
+        .insight-card.active { opacity: 1; transform: scale(1.1); font-weight: 600; color: black; }
+        .topic-badge { font-size: 0.7rem; font-weight: 800; color: var(--primary-red); text-transform: uppercase; margin-bottom: 0.5rem; display: block; letter-spacing: 0.1em; }
+        .red-dot { position: absolute; left: 0; top: 1.5rem; transform: translateY(-50%); width: var(--dot-size); height: var(--dot-size); background-color: var(--primary-red); border-radius: 50%; z-index: 60; transition: transform 0.4s ease; }
+        .insight-card.active .red-dot { transform: translateY(-50%) scale(1.3); }
+        .freq-label { display: block; font-size: 0.7rem; color: #999; text-transform: uppercase; font-weight: 700; margin-top: 1rem; letter-spacing: 0.05em; }
 
-        .topic-badge { font-size: 0.75rem; font-weight: 800; color: var(--primary-red); text-transform: uppercase; margin-bottom: 0.5rem; display: block; letter-spacing: 0.1em; }
-        .insight-text { font-size: 1.2rem; line-height: 1.6; text-align: justify; }
-        .insight-text b { color: #000; font-weight: 700; }
-        .freq-label { display: block; font-size: 0.7rem; color: #999; text-transform: uppercase; font-weight: 700; margin-top: 1.2rem; }
-
-        .red-dot { position: absolute; left: 0; top: 1.8rem; width: 16px; height: 16px; background-color: var(--primary-red); border-radius: 50%; transition: transform 0.4s ease; }
-        .insight-card.active .red-dot { transform: scale(1.3); }
-
-        /* --- SIDEBAR (Fixed & Scrollable) --- */
-        #sidebar-container { 
-            height: calc(100vh - var(--header-height)); 
-            padding: 2rem; 
-            opacity: 0; 
-            transform: translateX(20px); 
-            transition: all 0.3s ease; 
-            background: #FAFAFA; 
-            border-left: 1px solid #EEE;
-            overflow: hidden; /* Container doesn't scroll, content does */
-        }
+        /* --- SIDEBAR --- */
+        #sidebar-container { height: 100%; display: flex; flex-direction: column; justify-content: center; padding: 0 3rem 0 1rem; opacity: 0; transform: translateX(10px); transition: all 0.3s ease; z-index: 10; overflow: hidden; }
         #sidebar-container.visible { opacity: 1; transform: translateX(0); }
-        
-        #sidebar-content { 
-            height: 100%; 
-            overflow-y: auto; 
-            padding-bottom: 5rem;
-            scrollbar-width: thin; 
-        }
-        #sidebar-content::-webkit-scrollbar { width: 4px; }
-        #sidebar-content::-webkit-scrollbar-thumb { background: #DDD; border-radius: 10px; }
-
-        .source-card { width: 100%; background: #FFF; border: 1px solid #DDD; padding: 1.2rem; border-radius: 8px; margin-bottom: 1.2rem; border-left: 4px solid var(--primary-red); box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
-        .source-meta { display: flex; justify-content: space-between; font-size: 0.65rem; color: #999; font-weight: 700; text-transform: uppercase; margin-bottom: 0.8rem; }
+        #sidebar-content { max-height: 75vh; overflow-y: auto; padding: 10px; scrollbar-width: none; }
+        #sidebar-content::-webkit-scrollbar { display: none; }
+        .source-card { background: #f9fafb; border: 1px solid #e5e7eb; padding: 1.2rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid var(--primary-red); font-size: 0.95rem; color: #374151; box-shadow: 0 2px 10px rgba(0,0,0,0.03); }
+        .source-meta { display: flex; justify-content: space-between; font-size: 0.7rem; color: #9ca3af; margin-bottom: 0.6rem; text-transform: uppercase; font-weight: 700; }
     </style>
 </head>
 <body>
+
     <header id="main-header">
         <div class="header-top">
-            <a href="question.html" class="nav-icon-btn"><svg class="icon-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></a>
+            <a href="question.html" class="nav-icon-btn" title="Questions"><svg class="icon-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></a>
             <div class="header-title">Audience Feedback</div>
-            <div class="flex items-center gap-4">
-                <a href="saved_comments.html" class="nav-icon-btn"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke-width="2.5"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path></svg></a>
-                <a href="comment_filter.html" class="nav-icon-btn"><svg class="icon-svg" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></a>
+            <div class="flex items-center" style="gap: 1rem;"> 
+                <a href="saved_comments.html" class="nav-icon-btn" title="View Saved Comments"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke-width="2.5"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path></svg></a>
+                <a href="comment_filter.html" class="nav-icon-btn" title="Search Filter"><svg class="icon-svg" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></a>
             </div>
         </div>
-        <div class="header-stats">
-            <span>Reddit: <span id="count-reddit" class="stat-val">--</span></span>
-            <span>YouTube: <span id="count-youtube" class="stat-val">--</span></span>
-            <span>App Store: <span id="count-ios" class="stat-val">--</span></span>
-            <span>Google Play: <span id="count-gp" class="stat-val">--</span></span>
-        </div>
+        <nav class="header-stats" id="topic-nav-bar">
+            </nav>
     </header>
 
     <div id="dashboard-container">
         <div></div>
         <div id="report-scroller">
             <div class="scroll-spacer"></div>
-            <div id="insights-list"></div>
+            <div id="insights-list">
+                <p class="text-center text-gray-400 mt-20">Loading analysis...</p>
+            </div>
             <div class="scroll-spacer"></div>
         </div>
-        <div id="sidebar-container"><div id="sidebar-content"></div></div>
+        <div id="sidebar-container">
+            <div id="sidebar-content"></div>
+        </div>
     </div>
 
     <script>
         let REPORT_DATA = [];
         let observer;
 
-        // Helper to convert Markdown **bold** to HTML <b>
-        function formatMarkdown(text) {
-            return text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
-        }
-
-        document.addEventListener('DOMContentLoaded', async () => {
-            loadSourceCounts();
-            loadReport();
-        });
-
-        async function loadSourceCounts() {
-            try {
-                const res = await fetch("/api/source_counts");
-                if (res.ok) {
-                    const c = await res.json();
-                    document.getElementById('count-reddit').textContent = c['Reddit'] || 0;
-                    document.getElementById('count-youtube').textContent = c['YouTube'] || 0;
-                    document.getElementById('count-ios').textContent = c['iOS'] || 0;
-                    document.getElementById('count-gp').textContent = c['GP'] || 0;
-                }
-            } catch (e) {}
-        }
+        document.addEventListener('DOMContentLoaded', loadReport);
 
         async function loadReport() {
             try {
-                const res = await fetch("/report_with_sources.json");
-                REPORT_DATA = await res.json();
-                renderInsights(REPORT_DATA);
-            } catch (e) { document.getElementById('insights-list').innerHTML = "Error loading report."; }
+                const response = await fetch("/report_with_sources.json");
+                if (!response.ok) throw new Error("Failed to load report");
+                REPORT_DATA = await response.json();
+                renderDashboard(REPORT_DATA);
+                renderNavigation(REPORT_DATA);
+            } catch (e) {
+                document.getElementById('insights-list').innerHTML = `<p class="text-center text-red-500">${e.message}</p>`;
+            }
         }
 
-        function renderInsights(data) {
-            const list = document.getElementById('insights-list');
-            list.innerHTML = '';
-            data.forEach((item, i) => {
+        function renderNavigation(data) {
+            const nav = document.getElementById('topic-nav-bar');
+            nav.innerHTML = '';
+            
+            // Get unique topics from report data
+            const topics = [...new Set(data.map(item => item.topic).filter(t => t))];
+            
+            topics.forEach(topic => {
+                const btn = document.createElement('button');
+                btn.className = 'nav-topic-link';
+                btn.textContent = topic;
+                btn.onclick = () => {
+                    const cards = document.querySelectorAll('.insight-card');
+                    const target = Array.from(cards).find(c => data[c.dataset.index].topic === topic);
+                    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                };
+                nav.appendChild(btn);
+            });
+        }
+
+        function renderDashboard(data) {
+            const container = document.getElementById('insights-list');
+            container.innerHTML = ''; 
+
+            data.forEach((item, index) => {
                 const card = document.createElement('div');
                 card.className = 'insight-card';
-                card.dataset.index = i;
-                card.innerHTML = `
-                    <div class="red-dot"></div>
-                    <span class="topic-badge">${item.topic}</span>
-                    <div class="insight-text">${formatMarkdown(item.insight)}</div>
-                    <span class="freq-label">Combined from ${item.count} feedback points</span>
-                `;
-                list.appendChild(card);
+                card.dataset.index = index; 
+                
+                const dot = document.createElement('div');
+                dot.className = 'red-dot';
+                
+                const badge = document.createElement('span');
+                badge.className = 'topic-badge';
+                badge.textContent = item.topic || 'General';
+                
+                const text = document.createElement('div');
+                text.textContent = item.insight; 
+                
+                // FIXED: Pluralization Logic
+                const freq = document.createElement('span');
+                freq.className = 'freq-label';
+                const count = item.count || 1;
+                freq.textContent = count === 1 ? `From 1 feedback point` : `Combined from ${count} feedback points`;
+                
+                card.appendChild(dot);
+                card.appendChild(badge);
+                card.appendChild(text);
+                card.appendChild(freq);
+                container.appendChild(card);
             });
+
             initObserver();
+            setTimeout(() => {
+                const firstCard = document.querySelector('.insight-card');
+                if (firstCard) setActiveInsight(firstCard);
+            }, 100);
         }
 
         function initObserver() {
-            const options = { root: document.getElementById('report-scroller'), rootMargin: '-45% 0px -45% 0px', threshold: 0 };
+            const scroller = document.getElementById('report-scroller');
+            const options = { root: scroller, rootMargin: '-45% 0px -45% 0px', threshold: 0 };
             observer = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
-                    if (entry.isIntersecting) setActive(entry.target);
+                    if (entry.isIntersecting) setActiveInsight(entry.target);
                     else entry.target.classList.remove('active');
                 });
             }, options);
-            document.querySelectorAll('.insight-card').forEach(c => observer.observe(c));
+            document.querySelectorAll('.insight-card').forEach(card => observer.observe(card));
         }
 
-        function setActive(card) {
+        function setActiveInsight(card) {
             document.querySelectorAll('.insight-card').forEach(c => c.classList.remove('active'));
             card.classList.add('active');
-            updateSidebar(REPORT_DATA[card.dataset.index].citations);
+            
+            // Sync nav bar styling
+            const currentTopic = REPORT_DATA[card.dataset.index].topic;
+            document.querySelectorAll('.nav-topic-link').forEach(link => {
+                link.classList.toggle('active', link.textContent === currentTopic);
+            });
+
+            updateSidebar(REPORT_DATA[card.dataset.index].citations || []);
         }
 
         function updateSidebar(citations) {
-            const container = document.getElementById('sidebar-container');
+            const sidebar = document.getElementById('sidebar-container');
             const content = document.getElementById('sidebar-content');
-            container.classList.remove('visible');
+            sidebar.classList.remove('visible');
+            
             setTimeout(() => {
-                content.innerHTML = citations.map(c => `
-                    <div class="source-card">
-                        <div class="source-meta"><span>${c.source_platform}</span><span>${c.date}</span></div>
-                        <div class="italic text-xs leading-relaxed">"${c.comment_text}"</div>
-                        <div class="mt-3"><a href="${c.comment_url}" target="_blank" class="text-xs text-red-600 font-bold uppercase hover:underline">Original Source &rarr;</a></div>
-                    </div>
-                `).join('');
-                container.classList.add('visible');
-                content.scrollTop = 0; // Reset scroll for new citations
-            }, 100);
+                content.innerHTML = '';
+                if (citations.length === 0) {
+                    content.innerHTML = '<p class="text-gray-300 italic text-sm">No direct citations linked.</p>';
+                } else {
+                    citations.forEach(c => {
+                        content.innerHTML += `
+                            <div class="source-card">
+                                <div class="source-meta"><span>${c.source_platform}</span><span>${c.date || 'Recent'}</span></div>
+                                <div class="text-black italic leading-relaxed">"${c.comment_text}"</div>
+                                <div class="mt-3"><a href="${c.comment_url}" target="_blank" class="text-xs text-red-600 font-bold hover:underline uppercase tracking-wide">see original&rarr;</a></div>
+                            </div>
+                        `;
+                    });
+                }
+                sidebar.classList.add('visible');
+            }, 100); 
         }
     </script>
 </body>
