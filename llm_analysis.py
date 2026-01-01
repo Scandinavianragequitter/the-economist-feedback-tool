@@ -23,25 +23,28 @@ def process_data_with_llm(json_data):
     if not OPENROUTER_API_KEY:
         return "Error: OPENROUTER_API_KEY environment variable not set."
 
-    # --- BEHAVIORAL ANALYST PROMPT ---
+    # --- STRATEGIC PRODUCT ANALYST PROMPT ---
     SYSTEM_INSTRUCTION = (
-        "You are a Behavior-Focused Product Analyst. Your goal is to synthesize user feedback into a dashboard "
-        "describing how users interact with the service and the tactics they employ to navigate perceived friction. "
-        "You must avoid stating user complaints as objective facts about the service."
+        "You are a Strategic Product Analyst for The Economist. Your goal is to translate raw user feedback "
+        "into actionable product insights that a Product Manager can use to drive roadmaps. "
+        "You must look past user vocabulary to identify the underlying product friction or business risk."
     )
 
     CUSTOM_PROMPT = (
-        "Analyze the input data to identify 10-15 specific user behaviors or friction points. "
-        "\n\nSTRICT RULES:\n"
-        "1. DYNAMIC TOPICS: Assign a specific, 2-3 word topic to each insight (e.g., 'SUBSCRIPTION PRICING', 'IPAD UI SCALING'). "
-        "NEVER use generic topics like 'GENERAL', 'APP ISSUES', or 'FEEDBACK'.\n"
-        "2. BEHAVIORAL PERSPECTIVE: Describe what users *do* or how they *respond* to the service. "
-        "Instead of 'The price is high', use 'Users utilize various tactics like VPNs or resellers to bypass standard renewal pricing'.\n"
-        "3. AVOID SERVICE 'FACTS': Do not validate user opinions as technical truth (e.g., avoid 'The app is broken'). "
-        "Instead, use 'Users encounter friction during login and resort to multiple reinstall attempts'.\n"
-        "4. BREVITY: Each insight must be a single punchy sentence, maximum 20 words.\n"
-        "5. FORMAT: Each line must follow: 'TOPIC: Behavioral insight sentence [[ID1, ID2]]'.\n"
-        "6. SEPARATION: Put exactly TWO blank lines between every entry.\n\n"
+        "Analyze the input data to identify 10-15 distinct product insights. "
+        "\n\nSTRICT ANALYTICAL RULES:\n"
+        "1. THE 'SO WHAT?' FILTER: For every comment, ask: 'What does a PM need to fix here?' "
+        "Ignore the user's emotional tone and identify the root cause (e.g., instead of 'cancellation threats', "
+        "identify 'Manual retention workflows' or 'High renewal price sensitivity').\n"
+        "2. DYNAMIC TOPICS: Use 2-3 word technical/business categories (e.g., 'RETENTION LOGIC', 'DEVICE OPTIMIZATION', 'RENEWAL UI'). "
+        "NEVER use generic labels.\n"
+        "3. ACTIONABLE DESCRIPTION: Describe the friction point in a way that implies a product requirement. "
+        "Use **bolding** for the core technical or business issue.\n"
+        "4. AVOID REPEATING EMOTION: Do not use words like 'threaten', 'hate', or 'scam'. Use neutral terms like "
+        "'Users circumvent standard workflows' or 'Perceived value-to-price misalignment'.\n"
+        "5. BREVITY: One punchy sentence per insight. Max 22 words.\n"
+        "6. FORMAT: 'TOPIC: Insight sentence with **bolded friction** [[ID1, ID2]]'.\n"
+        "7. SEPARATION: Exactly TWO blank lines between entries.\n\n"
         "--- INPUT DATA ---\n"
     )
     
@@ -49,7 +52,7 @@ def process_data_with_llm(json_data):
         "Authorization": f"Bearer {OPENROUTER_API_KEY}", 
         "Content-Type": "application/json", 
         "Referer": HTTP_REFERER, 
-        "X-Title": "The Economist Behavioral Analyzer"
+        "X-Title": "Economist Strategic Analyst"
     }
     
     payload = {
@@ -58,7 +61,7 @@ def process_data_with_llm(json_data):
             {"role": "system", "content": SYSTEM_INSTRUCTION}, 
             {"role": "user", "content": CUSTOM_PROMPT + json_data}
         ], 
-        "temperature": 0.0001
+        "temperature": 0.1 # Low temperature for consistent, analytical output
     }
 
     for attempt in range(MAX_RETRIES):
@@ -66,7 +69,6 @@ def process_data_with_llm(json_data):
             response = requests.post(OPENROUTER_API_URL, headers=headers, json=payload, timeout=300)
             response.raise_for_status()
             content = response.json()['choices'][0]['message']['content'].strip()
-            # Clean DeepSeek/Reasoning tags
             content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL).strip()
             return content
         except Exception as e:
@@ -84,7 +86,7 @@ def main():
     analysis = process_data_with_llm(json_data)
     with open(LLM_TEXT_OUTPUT, 'w', encoding='utf-8') as out_f:
         out_f.write(analysis)
-    print(f"✅ Behavioral analysis saved to {LLM_TEXT_OUTPUT}")
+    print(f"✅ Strategic analysis saved to {LLM_TEXT_OUTPUT}")
 
 if __name__ == "__main__":
     main()
