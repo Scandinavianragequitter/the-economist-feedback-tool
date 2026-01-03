@@ -40,11 +40,9 @@ def process_data_with_llm(json_data):
         "NEVER use generic labels.\n"
         "3. ACTIONABLE DESCRIPTION: Describe the friction point in a way that implies a product requirement. "
         "Use **bolding** for the core technical or business issue.\n"
-        "4. AVOID REPEATING EMOTION: Do not use words like 'threaten', 'hate', or 'scam'. Use neutral terms like "
-        "'Users circumvent standard workflows' or 'Perceived value-to-price misalignment'.\n"
-        "5. BREVITY: One punchy sentence per insight. Max 22 words.\n"
-        "6. FORMAT: 'TOPIC: Insight sentence with **bolded friction** [[ID1, ID2]]'.\n"
-        "7. SEPARATION: Exactly TWO blank lines between entries.\n\n"
+        "4. AVOID REPEATING EMOTION EXPRESSED IN THE DATA.\n"
+        "5. FORMAT: 'TOPIC: Insight sentence with bolded friction [[ID1, ID2]]'.\n"
+        "6. SEPARATION: Exactly TWO blank lines between entries.\n\n"
         "--- INPUT DATA ---\n"
     )
     
