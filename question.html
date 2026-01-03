@@ -85,42 +85,54 @@
         }
         .stat-val { color: var(--primary-red); font-weight: 700; margin-left: 0.25rem; }
         
-        /* Layout fix: Content is now centered and constrained to the viewport */
         #content-wrapper {
             margin-top: var(--header-height);
             height: calc(100vh - var(--header-height));
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
-            padding: 2rem; /* Reasonable padding */
+            padding: 4rem 2rem; /* Adjusted padding for white-space layout */
             box-sizing: border-box;
         }
         
         .large-text-area {
             width: 100%;
             max-width: 900px;
-            height: 100%; /* Take up available space */
-            background-color: #f9fafb; 
-            border: 1px solid #e5e7eb;
-            padding: 2rem;
-            border-radius: 8px;
+            height: 100%; 
+            background-color: transparent; /* Removed grey box */
+            border: none; /* Removed border */
             text-align: justify;
             font-size: 1.1rem;
             line-height: 1.6;
-            overflow-y: auto; /* Internal scrolling only */
+            overflow-y: auto; 
+            scrollbar-width: thin;
+        }
+
+        .large-text-area::-webkit-scrollbar {
+            width: 6px;
+        }
+        .large-text-area::-webkit-scrollbar-thumb {
+            background: #e5e7eb;
+            border-radius: 10px;
         }
         
         .doc-section {
             border-left: 4px solid var(--primary-red);
             padding-left: 1.5rem;
-            margin-bottom: 2rem;
+            margin-bottom: 3rem;
         }
         .doc-section h2 {
             font-size: 1.5rem;
             font-weight: 700;
-            margin-bottom: 0.5rem;
+            margin-bottom: 1rem;
             color: var(--text-black);
+        }
+
+        /* Link Color Styling */
+        .doc-section a {
+            color: var(--primary-red);
+            text-decoration: underline;
+            font-weight: 600;
         }
         
         .header-title a {
@@ -198,7 +210,10 @@
             <div class="doc-section">
                 <h2>About the developer</h2>
                 <p>
-                    This project was developed by Carl Jacob Ziesemer, a second year university student at TU Munich. He is a big admirer of The Economist for its focus on deep dive analyses as well as its efforts to use AI to improve their publication. He'd love to have a discussion with someone at The Economist about this project and to learn more about their exiting work and whether something like this dashboard is already used at the Economist. Feel free to reach out via LinkedIn: <a href="https://linkedin.com/in/carlziesemer" target="_blank" rel="noopener noreferrer" class="text-blue-600 underline">linkedin.com/in/carlziesemer</a> or email: <a href="mailto:carlziesemer@gmail.com" class="text-blue-600 underline">carlziesemer@gmail.com</a>.
+                    This project was developed by Carl Jacob Ziesemer, a second year university student at TU Munich. He is a big admirer of The Economist for its focus on deep dive analyses as well as its efforts to use AI to improve their publication. 
+                </p>
+                <p>
+                    He'd love to have a discussion with someone at The Economist about this project and to learn more about their exiting work and whether something like this dashboard is already used at the Economist. Feel free to reach out via LinkedIn: <a href="https://linkedin.com/in/carlziesemer" target="_blank" rel="noopener noreferrer">linkedin.com/in/carlziesemer</a> or email: <a href="mailto:carlziesemer@gmail.com">carlziesemer@gmail.com</a>.
                 </p>
             </div>
         </div>
