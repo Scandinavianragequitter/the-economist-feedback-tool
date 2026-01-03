@@ -228,11 +228,12 @@
 
     <script>
         const API_BASE_URL = "";
+        // Updated to match backend nl_sql_search endpoint
         const SEARCH_ENDPOINT = API_BASE_URL + "/api/nl_sql_search"; 
 
         function formatDate(raw) {
             if (!raw) return 'Recent';
-            if (!isNaN(raw)) {
+            if (!isNaN(raw)) { 
                  return new Date(raw * 1000).toISOString().split('T')[0];
             }
             if (typeof raw === 'number') {
@@ -257,7 +258,7 @@
             btn.disabled = true;
 
             try {
-                // Updated to use POST and match the api_proxy.py nl_sql_search endpoint
+                // Changed to POST with JSON body as required by api_proxy.py
                 const response = await fetch(SEARCH_ENDPOINT, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -267,7 +268,7 @@
                 if (!response.ok) throw new Error(`Server responded with ${response.status}`);
                 
                 const data = await response.json();
-                // Accessing data.results to match the backend return structure
+                // Pass results array to render function
                 renderResults(data.results || []);
             } catch (e) {
                 grid.innerHTML = `<p class="col-span-full text-center text-red-500 mt-10">Connection Error: ${e.message}</p>`;
@@ -291,9 +292,12 @@
                 const isStore = platformDisplay.includes('Store') || platformDisplay.includes('Play');
                 const linkText = isStore ? 'FIND ORIGINAL' : 'SEE ORIGINAL';
                 
+                // Use Unicode-safe encoding to avoid Latin1 btoa error
+                const encodedData = btoa(unescape(encodeURIComponent(JSON.stringify(c))));
+                
                 return `
                     <div class="result-card">
-                        <div class="bookmark-btn ${isBookmarked ? 'active' : ''}" onclick="toggleBookmark(this, '${c.id}', '${btoa(JSON.stringify(c))}')">
+                        <div class="bookmark-btn ${isBookmarked ? 'active' : ''}" onclick="toggleBookmark(this, '${c.id}', '${encodedData}')">
                             <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg>
                         </div>
                         <div class="meta-row"><span>${platformDisplay}</span><span>${formatDate(c.date)}</span></div>
@@ -310,7 +314,9 @@
             if (idx > -1) {
                 saved.splice(idx, 1); btn.classList.remove('active');
             } else {
-                saved.push(JSON.parse(atob(encodedData))); btn.classList.add('active');
+                // Use Unicode-safe decoding matching the encoding logic
+                const decodedData = JSON.parse(decodeURIComponent(escape(atob(encodedData))));
+                saved.push(decodedData); btn.classList.add('active');
             }
             localStorage.setItem('saved_comments', JSON.stringify(saved));
         }
@@ -322,6 +328,7 @@
                     const counts = await response.json();
                     document.getElementById('count-reddit').textContent = counts['Reddit'] || 0;
                     document.getElementById('count-youtube').textContent = counts['YouTube'] || 0;
+                    // Key mapping matching api_proxy.py
                     document.getElementById('count-ios').textContent = counts['iOS'] || counts['AppStore'] || 0;
                     document.getElementById('count-gp').textContent = counts['GP'] || counts['GooglePlay'] || 0;
                 }
