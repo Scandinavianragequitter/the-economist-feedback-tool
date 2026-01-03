@@ -10,182 +10,42 @@
     
     <style>
         :root {
-            --primary-red: #E3120B; 
-            --bg-white: #FFFFFF;
-            --text-black: #111111;
-            --header-bg: #000000;
-            --header-text: #FFFFFF;
-            --header-height: 8rem;
+            --primary-red: #E3120B; --bg-white: #FFFFFF; --text-black: #111111;
+            --header-bg: #000000; --header-text: #FFFFFF; --header-height: 8rem;
         }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-white);
-            color: var(--text-black);
-            margin: 0;
-            padding: 0;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            overflow-x: hidden;
-        }
-
-        /* --- HEADER --- */
-        #main-header {
-            position: fixed; top: 0; left: 0; right: 0;
-            height: var(--header-height);
-            background-color: var(--header-bg);
-            z-index: 100;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            padding: 0 2rem;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-        }
-
-        .header-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            height: 60%;
-            border-bottom: 1px solid #333;
-        }
-
-        .header-title {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--header-text);
-            text-decoration: none;
-        }
-
-        .header-stats {
-            height: 40%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 2rem;
-            font-size: 0.85rem;
-            color: #888;
-        }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-white); color: var(--text-black); margin: 0; padding: 0; overflow-x: hidden; height: 100vh; display: flex; flex-direction: column; }
+        
+        #main-header { position: fixed; top: 0; left: 0; right: 0; height: var(--header-height); background-color: var(--header-bg); z-index: 100; display: flex; flex-direction: column; justify-content: space-between; padding: 0 2rem; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+        .header-top { display: flex; justify-content: space-between; align-items: center; height: 60%; border-bottom: 1px solid #333; }
+        .nav-icon-btn { background: none; border: none; cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; transition: transform 0.2s; }
+        .nav-icon-btn:hover { transform: scale(1.1); }
+        .icon-svg { width: 28px; height: 28px; stroke: var(--primary-red); stroke-width: 2.5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+        .header-title { font-size: 1.5rem; font-weight: 700; color: var(--header-text); text-decoration: none; }
+        .header-stats { height: 40%; display: flex; align-items: center; justify-content: center; gap: 2rem; font-size: 0.85rem; color: #888; }
         .stat-val { color: var(--primary-red); font-weight: 700; margin-left: 0.25rem; }
 
-        /* --- EXPLORER LAYOUT --- */
-        #content-wrapper {
-            margin-top: var(--header-height);
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 3rem 2rem;
-            overflow-y: auto;
-        }
-
-        #search-area {
-            width: 100%;
-            max-width: 800px;
-            margin-bottom: 3rem;
-            text-align: center;
-        }
-
-        #input-container {
-            position: relative;
-            width: 100%;
-            margin-bottom: 1.5rem;
-        }
-
-        #query-input {
-            width: 100%;
-            padding: 1.4rem 1.8rem;
-            padding-right: 6rem;
-            border: 1px solid #EEE;
-            border-radius: 60px;
-            font-size: 1.2rem;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.03);
-            outline: none;
-        }
-
+        #content-wrapper { margin-top: var(--header-height); flex: 1; display: flex; flex-direction: column; align-items: center; padding: 3rem 2rem; overflow-y: auto; }
+        #search-area { width: 100%; max-width: 800px; margin-bottom: 3rem; text-align: center; }
+        #input-container { position: relative; width: 100%; margin-bottom: 1.5rem; }
+        #query-input { width: 100%; padding: 1.4rem 1.8rem; padding-right: 6rem; border: 1px solid #EEE; border-radius: 60px; font-size: 1.2rem; box-shadow: 0 10px 40px rgba(0,0,0,0.03); outline: none; transition: border-color 0.2s; }
         #query-input:focus { border-color: var(--primary-red); }
+        #search-btn { position: absolute; right: 0.8rem; top: 50%; transform: translateY(-50%); background: var(--primary-red); color: white; border-radius: 50px; padding: 0.8rem 1.5rem; font-weight: 800; cursor: pointer; }
 
-        #search-btn {
-            position: absolute;
-            right: 0.8rem; top: 50%;
-            transform: translateY(-50%);
-            background: var(--primary-red);
-            color: white;
-            border-radius: 50px;
-            padding: 0.8rem 1.5rem;
-            font-weight: 800;
-            cursor: pointer;
-        }
-
-        .pill-container {
-            display: flex; gap: 0.8rem; flex-wrap: wrap; justify-content: center;
-        }
-
-        .query-pill {
-            background: #F9FAFB;
-            color: #6B7280;
-            padding: 0.6rem 1.2rem;
-            border-radius: 30px;
-            font-size: 0.85rem;
-            cursor: pointer;
-            border: 1px solid #E5E7EB;
-            transition: all 0.2s;
-        }
-
+        .pill-container { display: flex; gap: 0.8rem; flex-wrap: wrap; justify-content: center; }
+        .query-pill { background: #F9FAFB; color: #6B7280; padding: 0.6rem 1.2rem; border-radius: 30px; font-size: 0.85rem; cursor: pointer; border: 1px solid #E5E7EB; transition: all 0.2s; }
         .query-pill:hover { border-color: var(--primary-red); color: var(--primary-red); background: white; }
 
-        /* --- RESULTS GRID --- */
-        #results-grid {
-            width: 100%;
-            max-width: 1200px;
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-            gap: 2rem;
-            padding-bottom: 5rem;
-        }
-
-        .result-card {
-            background: #FFF;
-            border: 1px solid #F3F4F6;
-            border-left: 4px solid var(--primary-red);
-            padding: 1.8rem;
-            border-radius: 12px;
-            position: relative;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-
-        .meta-row {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.7rem;
-            font-weight: 800;
-            color: #9CA3AF;
-            text-transform: uppercase;
-            margin-bottom: 1.2rem;
-        }
-
-        .comment-body {
-            font-style: italic;
-            font-size: 1rem;
-            line-height: 1.7;
-            color: #374151;
-            margin-bottom: 1.5rem;
-        }
-
-        .nav-icon-btn { background: none; border: none; cursor: pointer; display: flex; align-items: center; }
-        .icon-svg { width: 28px; height: 28px; stroke: var(--primary-red); stroke-width: 2.5; fill: none; }
-
-        .bookmark-btn { position: absolute; top: 1.5rem; right: 1.5rem; cursor: pointer; color: #E5E7EB; transition: color 0.2s; }
+        #results-grid { width: 100%; max-width: 1200px; display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 2rem; padding-bottom: 5rem; }
+        .result-card { background: #FFF; border: 1px solid #F3F4F6; border-left: 4px solid var(--primary-red); padding: 1.8rem; border-radius: 12px; position: relative; box-shadow: 0 4px 12px rgba(0,0,0,0.02); display: flex; flex-direction: column; justify-content: space-between; }
+        
+        /* ADJUSTED: Added padding-right to meta-row to avoid overlapping bookmark button */
+        .meta-row { display: flex; justify-content: space-between; font-size: 0.7rem; font-weight: 800; color: #9CA3AF; text-transform: uppercase; margin-bottom: 1.2rem; padding-right: 2.5rem; }
+        
+        .comment-body { font-style: italic; font-size: 1rem; line-height: 1.7; color: #374151; margin-bottom: 1.5rem; }
+        .bookmark-btn { position: absolute; top: 1.5rem; right: 1rem; cursor: pointer; color: #E5E7EB; transition: color 0.2s; z-index: 10; }
         .bookmark-btn.active { color: var(--primary-red); }
         
-        .loader {
-            border: 3px solid #f3f3f3; border-top: 3px solid var(--primary-red);
-            border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite;
-        }
+        .loader { border: 3px solid #f3f3f3; border-top: 3px solid var(--primary-red); border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
@@ -220,24 +80,20 @@
                 <div class="query-pill" onclick="pillSearch(this)">What do readers think about Gaza coverage?</div>
             </div>
         </div>
-
-        <div id="results-grid">
-            <p class="col-span-full text-center text-gray-400 mt-10">Enter a query to explore the database.</p>
-        </div>
+        <div id="results-grid"><p class="col-span-full text-center text-gray-400 mt-10">Enter a query to explore the database.</p></div>
     </div>
 
     <script>
         const API_BASE_URL = "";
-        // Updated to match backend nl_sql_search endpoint
         const SEARCH_ENDPOINT = API_BASE_URL + "/api/nl_sql_search"; 
 
         function formatDate(raw) {
-            if (!raw) return 'Recent';
-            if (!isNaN(raw)) { 
-                 return new Date(raw * 1000).toISOString().split('T')[0];
-            }
-            if (typeof raw === 'number') {
-                return new Date(raw * 1000).toISOString().split('T')[0];
+            if (!raw || raw === 'Recent') return 'Recent';
+            if (!isNaN(raw)) {
+                let d = raw.toString().length === 10 ? raw * 1000 : raw;
+                // Defend against IDs being misidentified as timestamps (ID > 100 years from now)
+                if (d > 4102444800000) return 'Recent'; 
+                return new Date(parseInt(d)).toISOString().split('T')[0];
             }
             return raw.toString().split(' ')[0];
         }
@@ -251,50 +107,35 @@
             const query = document.getElementById('query-input').value.trim();
             const grid = document.getElementById('results-grid');
             const btn = document.getElementById('search-btn');
-
             if (!query) return;
-
             grid.innerHTML = '<div class="col-span-full flex justify-center mt-10"><div class="loader"></div><span class="ml-3 text-gray-500">Understanding query...</span></div>';
             btn.disabled = true;
-
             try {
-                // Changed to POST with JSON body as required by api_proxy.py
                 const response = await fetch(SEARCH_ENDPOINT, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ nl_prompt: query })
                 });
-                
                 if (!response.ok) throw new Error(`Server responded with ${response.status}`);
-                
                 const data = await response.json();
-                // Pass results array to render function
                 renderResults(data.results || []);
-            } catch (e) {
-                grid.innerHTML = `<p class="col-span-full text-center text-red-500 mt-10">Connection Error: ${e.message}</p>`;
-            } finally {
-                btn.disabled = false;
-            }
+            } catch (e) { grid.innerHTML = `<p class="col-span-full text-center text-red-500 mt-10">Connection Error: ${e.message}</p>`;
+            } finally { btn.disabled = false; }
         }
 
         function renderResults(results) {
             const grid = document.getElementById('results-grid');
             const saved = JSON.parse(localStorage.getItem('saved_comments') || '[]');
-
             if (!results || results.length === 0) {
                 grid.innerHTML = '<p class="col-span-full text-center text-gray-400 mt-10">No matching commentary found.</p>';
                 return;
             }
-
             grid.innerHTML = results.map(c => {
                 const isBookmarked = saved.some(s => s.id === c.id);
                 const platformDisplay = c.source_platform || c.platform || 'General';
                 const isStore = platformDisplay.includes('Store') || platformDisplay.includes('Play');
                 const linkText = isStore ? 'FIND ORIGINAL' : 'SEE ORIGINAL';
-                
-                // Use Unicode-safe encoding to avoid Latin1 btoa error
                 const encodedData = btoa(unescape(encodeURIComponent(JSON.stringify(c))));
-                
                 return `
                     <div class="result-card">
                         <div class="bookmark-btn ${isBookmarked ? 'active' : ''}" onclick="toggleBookmark(this, '${c.id}', '${encodedData}')">
@@ -314,7 +155,6 @@
             if (idx > -1) {
                 saved.splice(idx, 1); btn.classList.remove('active');
             } else {
-                // Use Unicode-safe decoding matching the encoding logic
                 const decodedData = JSON.parse(decodeURIComponent(escape(atob(encodedData))));
                 saved.push(decodedData); btn.classList.add('active');
             }
@@ -328,17 +168,14 @@
                     const counts = await response.json();
                     document.getElementById('count-reddit').textContent = counts['Reddit'] || 0;
                     document.getElementById('count-youtube').textContent = counts['YouTube'] || 0;
-                    // Key mapping matching api_proxy.py
-                    document.getElementById('count-ios').textContent = counts['iOS'] || counts['AppStore'] || 0;
-                    document.getElementById('count-gp').textContent = counts['GP'] || counts['GooglePlay'] || 0;
+                    document.getElementById('count-ios').textContent = counts['iOS'] || counts['AppStore'] || counts['App Store'] || 0;
+                    document.getElementById('count-gp').textContent = counts['GP'] || counts['GooglePlay'] || counts['Google Play'] || 0;
                 }
             } catch (e) { console.warn("Count load failed"); }
         }
 
         document.addEventListener('DOMContentLoaded', loadSourceCounts);
-        document.getElementById('query-input').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') performSearch();
-        });
+        document.getElementById('query-input').addEventListener('keypress', (e) => { if (e.key === 'Enter') performSearch(); });
     </script>
 </body>
 </html>
