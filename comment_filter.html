@@ -228,14 +228,11 @@
 
     <script>
         const API_BASE_URL = "";
-        // Reverting to your older working endpoint name if necessary, 
-        // but modernizing the call logic to be robust.
-        const SEARCH_ENDPOINT = API_BASE_URL + "/api/search"; 
+        const SEARCH_ENDPOINT = API_BASE_URL + "/api/nl_sql_search"; 
 
-        // Fix 1: Date conversion for Unix timestamps
         function formatDate(raw) {
             if (!raw) return 'Recent';
-            if (!isNaN(raw) && strpos(raw, '.') === false) { // Unix timestamp check
+            if (!isNaN(raw)) {
                  return new Date(raw * 1000).toISOString().split('T')[0];
             }
             if (typeof raw === 'number') {
@@ -260,13 +257,18 @@
             btn.disabled = true;
 
             try {
-                // Using GET as per standard search API, but change to POST if your backend requires it
-                const response = await fetch(`${SEARCH_ENDPOINT}?q=${encodeURIComponent(query)}`);
+                // Updated to use POST and match the api_proxy.py nl_sql_search endpoint
+                const response = await fetch(SEARCH_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nl_prompt: query })
+                });
                 
                 if (!response.ok) throw new Error(`Server responded with ${response.status}`);
                 
                 const data = await response.json();
-                renderResults(data);
+                // Accessing data.results to match the backend return structure
+                renderResults(data.results || []);
             } catch (e) {
                 grid.innerHTML = `<p class="col-span-full text-center text-red-500 mt-10">Connection Error: ${e.message}</p>`;
             } finally {
@@ -313,7 +315,6 @@
             localStorage.setItem('saved_comments', JSON.stringify(saved));
         }
 
-        // Fix 2: Updated mapping for Google and iOS numbers
         async function loadSourceCounts() {
             try {
                 const response = await fetch("/api/source_counts");
@@ -321,15 +322,13 @@
                     const counts = await response.json();
                     document.getElementById('count-reddit').textContent = counts['Reddit'] || 0;
                     document.getElementById('count-youtube').textContent = counts['YouTube'] || 0;
-                    // Check multiple possible keys from backend
-                    document.getElementById('count-ios').textContent = counts['AppStore'] || counts['App Store'] || counts['iOS'] || 0;
-                    document.getElementById('count-gp').textContent = counts['GooglePlay'] || counts['Google Play'] || counts['GP'] || 0;
+                    document.getElementById('count-ios').textContent = counts['iOS'] || counts['AppStore'] || 0;
+                    document.getElementById('count-gp').textContent = counts['GP'] || counts['GooglePlay'] || 0;
                 }
             } catch (e) { console.warn("Count load failed"); }
         }
 
         document.addEventListener('DOMContentLoaded', loadSourceCounts);
-        // Also allow Enter key on input
         document.getElementById('query-input').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') performSearch();
         });
