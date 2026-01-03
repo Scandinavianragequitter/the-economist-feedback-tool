@@ -30,7 +30,7 @@ def fetch_citation_details(citation_id: str) -> Dict[str, Any]:
     conn = get_db_connection(config["db_path"])
     if not conn: return {"id": citation_id, "comment_text": "DB missing", "comment_url": "#"}
     
-    sql_query = "" # (Existing logic for R, YT, AS, GP selection goes here)
+    sql_query = ""
     if platform_key == "R":
         db_id = citation_id.split(":")[-1]
         sql_query = f"SELECT body AS comment_text, created_utc AS date, post_id FROM reddit_comments WHERE comment_id = '{db_id}'"
@@ -48,17 +48,26 @@ def fetch_citation_details(citation_id: str) -> Dict[str, Any]:
         cursor = conn.execute(sql_query); row = cursor.fetchone()
         if row:
             result = dict(row)
-            # --- DATE FORMATTING FIX ---
+            # --- CONVERT TIMESTAMP TO DATE ---
             raw_date = result.get('date')
             formatted_date = "Recent"
             try:
+                # Handle Unix timestamps (e.g., 1765050154.0)
                 if isinstance(raw_date, (int, float)) or (isinstance(raw_date, str) and raw_date.replace('.','',1).isdigit()):
                     formatted_date = datetime.datetime.fromtimestamp(float(raw_date)).strftime('%Y-%m-%d')
                 else:
+                    # Handle existing ISO strings
                     formatted_date = str(raw_date).split(' ')[0]
-            except: formatted_date = str(raw_date) if raw_date else "Recent"
+            except: 
+                formatted_date = str(raw_date) if raw_date else "Recent"
             
-            return {"id": citation_id, "comment_text": result.get('comment_text', 'N/A'), "comment_url": result.get('comment_url', '#'), "source_platform": config['platform_name'], "date": formatted_date}
+            return {
+                "id": citation_id, 
+                "comment_text": result.get('comment_text', 'N/A'), 
+                "comment_url": result.get('comment_url', '#'), 
+                "source_platform": config['platform_name'], 
+                "date": formatted_date
+            }
     except: pass
     finally: conn.close()
     return {"id": citation_id, "comment_text": "Not found", "comment_url": "#"}
@@ -70,10 +79,8 @@ def parse_report(raw_text):
         citation_matches = re.findall(r"\[\[(.*?)\]\]", p)
         ids = []
         for match in citation_matches: ids.extend([cid.strip() for cid in match.split(',')])
-        
         clean_text = re.sub(r"\[\[.*?\]\]", "", p).strip()
         
-        # --- HARD TOPIC SPLIT ---
         if ":" in clean_text[:25]:
             topic_part, insight_part = clean_text.split(":", 1)
             topic = topic_part.strip().upper()

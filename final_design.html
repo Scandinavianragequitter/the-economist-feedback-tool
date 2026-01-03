@@ -10,186 +10,109 @@
     
     <style>
         :root {
-            --primary-red: #E3120B; 
-            --bg-white: #FFFFFF;
-            --text-black: #111111;
-            --header-bg: #000000;
-            --header-text: #FFFFFF;
-            --text-block-width: 580px; 
-            --column-width: 800px;     
-            --dot-size: 16px;
-            --header-height: 8rem;
+            --primary-red: #E3120B; --bg-white: #FFFFFF; --text-black: #111111;
+            --header-bg: #000000; --header-text: #FFFFFF; --text-block-width: 580px; 
+            --dot-size: 16px; --header-height: 8rem;
         }
-
         body { font-family: 'Inter', sans-serif; background-color: var(--bg-white); color: var(--text-black); margin: 0; padding: 0; overflow: hidden; }
-
-        /* --- HEADER --- */
         #main-header { position: fixed; top: 0; left: 0; right: 0; height: var(--header-height); background-color: var(--header-bg); z-index: 100; display: flex; flex-direction: column; justify-content: space-between; padding: 0 2rem; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
         .header-top { display: flex; justify-content: space-between; align-items: center; height: 60%; border-bottom: 1px solid #333; }
         .nav-icon-btn { background: none; border: none; cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; transition: transform 0.2s; }
         .nav-icon-btn:hover { transform: scale(1.1); }
         .icon-svg { width: 28px; height: 28px; stroke: var(--primary-red); stroke-width: 2.5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
         .header-title { font-size: 1.5rem; font-weight: 700; color: var(--header-text); letter-spacing: -0.02em; }
-
-        /* --- TOPIC NAVIGATION --- */
-        .header-stats { 
-            height: 40%; display: flex; align-items: center; justify-content: center; gap: 1.5rem; 
-            font-size: 0.75rem; color: #888; overflow-x: auto; white-space: nowrap; padding: 0 1rem;
-        }
-        .header-stats::-webkit-scrollbar { display: none; }
-        .nav-topic-link {
-            color: #888; text-transform: uppercase; font-weight: 700; border: none; background: none;
-            cursor: pointer; transition: color 0.2s; letter-spacing: 0.05em;
-        }
-        .nav-topic-link:hover { color: var(--primary-red); }
+        .header-stats { height: 40%; display: flex; align-items: center; justify-content: center; gap: 1.5rem; font-size: 0.75rem; color: #888; overflow-x: auto; white-space: nowrap; padding: 0 1rem; scrollbar-width: none; }
+        .nav-topic-link { color: #888; text-transform: uppercase; font-weight: 700; border: none; background: none; cursor: pointer; transition: color 0.2s; letter-spacing: 0.05em; }
         .nav-topic-link.active { color: #FFF; border-bottom: 2px solid var(--primary-red); padding-bottom: 2px; }
-
-        /* --- LAYOUT --- */
+        
         #dashboard-container { padding-top: var(--header-height); height: 100vh; width: 100vw; display: grid; grid-template-columns: 8% 1fr 480px; overflow: hidden; position: relative; }
         #report-scroller { height: 100%; overflow-y: auto; scroll-snap-type: y proximity; scroll-behavior: smooth; scrollbar-width: none; position: relative; z-index: 50; }
-        #report-scroller::-webkit-scrollbar { display: none; }
         .scroll-spacer { height: 45vh; width: 100%; }
-
-        /* --- INSIGHT CARDS --- */
-        .insight-card { width: var(--text-block-width); margin: 0 auto 35vh auto; position: relative; padding-left: 3rem; scroll-snap-align: center; opacity: 0.3; transform: scale(0.95); transition: all 0.4s cubic-bezier(0.2, 1, 0.3, 1); color: #333; z-index: 51; }
-        .insight-card.active { opacity: 1; transform: scale(1.02); font-weight: 400; color: black; }
+        
+        .insight-card { width: var(--text-block-width); margin: 0 auto 35vh auto; position: relative; padding-left: 3rem; scroll-snap-align: center; opacity: 0.3; transform: scale(0.95); transition: all 0.4s ease; color: #333; }
+        .insight-card.active { opacity: 1; transform: scale(1.02); color: black; }
         .insight-text { font-size: 1.2rem; line-height: 1.6; }
-        .insight-text b { font-weight: 800; color: #000; } /* Styling for parsed bold text */
+        .insight-text b { font-weight: 800; color: #000; }
         
         .topic-badge { font-size: 0.75rem; font-weight: 800; color: var(--primary-red); text-transform: uppercase; margin-bottom: 0.5rem; display: block; letter-spacing: 0.1em; }
         .red-dot { position: absolute; left: 0; top: 1.8rem; transform: translateY(-50%); width: var(--dot-size); height: var(--dot-size); background-color: var(--primary-red); border-radius: 50%; z-index: 60; transition: transform 0.4s ease; }
         .insight-card.active .red-dot { transform: translateY(-50%) scale(1.3); }
-        .freq-label { display: block; font-size: 0.7rem; color: #999; text-transform: uppercase; font-weight: 700; margin-top: 1.2rem; letter-spacing: 0.05em; }
-
-        /* --- SIDEBAR & OVERFLOW FIX --- */
-        #sidebar-container { height: calc(100vh - var(--header-height)); padding: 2rem; opacity: 0; transform: translateX(20px); transition: all 0.3s ease; background: #FAFAFA; border-left: 1px solid #EEE; overflow: hidden; }
+        .freq-label { display: block; font-size: 0.7rem; color: #999; text-transform: uppercase; font-weight: 700; margin-top: 1.2rem; }
+        
+        /* SIDEBAR CONSTRAINT: Makes citation list scrollable if it exceeds screen height */
+        #sidebar-container { height: calc(100vh - var(--header-height)); padding: 2rem; opacity: 0; transform: translateX(20px); transition: all 0.3s ease; background: #FAFAFA; border-left: 1px solid #EEE; overflow: hidden; display: flex; flex-direction: column; }
         #sidebar-container.visible { opacity: 1; transform: translateX(0); }
-        #sidebar-content { height: 100%; overflow-y: auto; padding-bottom: 5rem; scrollbar-width: thin; }
+        #sidebar-content { flex: 1; overflow-y: auto; padding-bottom: 2rem; scrollbar-width: thin; }
         #sidebar-content::-webkit-scrollbar { width: 4px; }
         #sidebar-content::-webkit-scrollbar-thumb { background: #DDD; border-radius: 10px; }
-
-        .source-card { 
-            width: 100%; background: #FFF; border: 1px solid #DDD; padding: 1.2rem; border-radius: 8px; margin-bottom: 1.2rem; border-left: 4px solid var(--primary-red); 
-            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-            /* FIX: Prevents long URLs from breaking the layout */
-            overflow-wrap: anywhere; word-break: break-word; 
-        }
+        
+        .source-card { width: 100%; background: #FFF; border: 1px solid #DDD; padding: 1.2rem; border-radius: 8px; margin-bottom: 1.2rem; border-left: 4px solid var(--primary-red); box-shadow: 0 2px 8px rgba(0,0,0,0.04); overflow-wrap: anywhere; word-break: break-word; }
         .source-meta { display: flex; justify-content: space-between; font-size: 0.65rem; color: #999; margin-bottom: 0.8rem; text-transform: uppercase; font-weight: 700; }
     </style>
 </head>
 <body>
-
     <header id="main-header">
         <div class="header-top">
-            <a href="question.html" class="nav-icon-btn" title="Questions"><svg class="icon-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></a>
+            <a href="question.html" class="nav-icon-btn"><svg class="icon-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></a>
             <div class="header-title">Audience Feedback</div>
             <div class="flex items-center" style="gap: 1rem;"> 
-                <a href="saved_comments.html" class="nav-icon-btn" title="View Saved Comments"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke-width="2.5"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path></svg></a>
-                <a href="comment_filter.html" class="nav-icon-btn" title="Search Filter"><svg class="icon-svg" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></a>
+                <a href="saved_comments.html" class="nav-icon-btn"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke-width="2.5"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path></svg></a>
+                <a href="comment_filter.html" class="nav-icon-btn"><svg class="icon-svg" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></a>
             </div>
         </div>
         <nav class="header-stats" id="topic-nav-bar"></nav>
     </header>
-
     <div id="dashboard-container">
         <div></div>
         <div id="report-scroller">
             <div class="scroll-spacer"></div>
-            <div id="insights-list">
-                <p class="text-center text-gray-400 mt-20">Loading analysis...</p>
-            </div>
+            <div id="insights-list"></div>
             <div class="scroll-spacer"></div>
         </div>
-        <div id="sidebar-container">
-            <div id="sidebar-content"></div>
-        </div>
+        <div id="sidebar-container"><div id="sidebar-content"></div></div>
     </div>
-
     <script>
         let REPORT_DATA = [];
-        let observer;
-
-        // HELPER: Converts **bold** from LLM into HTML <b>
-        function formatMarkdown(text) {
-            return text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
-        }
-
-        document.addEventListener('DOMContentLoaded', loadReport);
-
+        function parseMd(t) { return t.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>'); }
         async function loadReport() {
             try {
-                const response = await fetch("/report_with_sources.json");
-                if (!response.ok) throw new Error("Failed to load report");
-                REPORT_DATA = await response.json();
+                const res = await fetch("/report_with_sources.json");
+                REPORT_DATA = await res.json();
                 renderDashboard(REPORT_DATA);
                 renderNavigation(REPORT_DATA);
-            } catch (e) {
-                document.getElementById('insights-list').innerHTML = `<p class="text-center text-red-500">${e.message}</p>`;
-            }
+            } catch (e) { console.error(e); }
         }
-
         function renderNavigation(data) {
             const nav = document.getElementById('topic-nav-bar');
             nav.innerHTML = '';
             const topics = [...new Set(data.map(item => item.topic).filter(t => t))];
-            
-            topics.forEach(topic => {
+            topics.forEach(t => {
                 const btn = document.createElement('button');
-                btn.className = 'nav-topic-link';
-                btn.textContent = topic;
+                btn.className = 'nav-topic-link'; btn.textContent = t;
                 btn.onclick = () => {
                     const cards = document.querySelectorAll('.insight-card');
-                    const target = Array.from(cards).find(c => data[c.dataset.index].topic === topic);
+                    const target = Array.from(cards).find(c => data[c.dataset.index].topic === t);
                     if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 };
                 nav.appendChild(btn);
             });
         }
-
         function renderDashboard(data) {
             const container = document.getElementById('insights-list');
             container.innerHTML = ''; 
-
             data.forEach((item, index) => {
                 const card = document.createElement('div');
-                card.className = 'insight-card';
-                card.dataset.index = index; 
-                
-                const dot = document.createElement('div');
-                dot.className = 'red-dot';
-                
-                const badge = document.createElement('span');
-                badge.className = 'topic-badge';
-                badge.textContent = item.topic || 'General';
-                
-                const text = document.createElement('div');
-                text.className = 'insight-text';
-                // Using the Markdown formatter here
-                text.innerHTML = formatMarkdown(item.insight); 
-                
-                const freq = document.createElement('span');
-                freq.className = 'freq-label';
-                const count = item.count || 1;
-                freq.textContent = count === 1 ? `From 1 feedback point` : `Combined from ${count} feedback points`;
-                
-                card.appendChild(dot);
-                card.appendChild(badge);
-                card.appendChild(text);
-                card.appendChild(freq);
+                card.className = 'insight-card'; card.dataset.index = index; 
+                card.innerHTML = `<div class="red-dot"></div><span class="topic-badge">${item.topic}</span><div class="insight-text">${parseMd(item.insight)}</div><span class="freq-label">${item.count === 1 ? 'From 1 feedback point' : `Combined from ${item.count} feedback points`}</span>`;
                 container.appendChild(card);
             });
-
             initObserver();
-            setTimeout(() => {
-                const firstCard = document.querySelector('.insight-card');
-                if (firstCard) setActiveInsight(firstCard);
-            }, 100);
+            setTimeout(() => { const f = document.querySelector('.insight-card'); if (f) setActiveInsight(f); }, 100);
         }
-
         function initObserver() {
             const scroller = document.getElementById('report-scroller');
             const options = { root: scroller, rootMargin: '-45% 0px -45% 0px', threshold: 0 };
-            observer = new IntersectionObserver((entries) => {
+            const observer = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
                     if (entry.isIntersecting) setActiveInsight(entry.target);
                     else entry.target.classList.remove('active');
@@ -197,43 +120,29 @@
             }, options);
             document.querySelectorAll('.insight-card').forEach(card => observer.observe(card));
         }
-
         function setActiveInsight(card) {
             document.querySelectorAll('.insight-card').forEach(c => c.classList.remove('active'));
             card.classList.add('active');
-            
-            const currentTopic = REPORT_DATA[card.dataset.index].topic;
-            document.querySelectorAll('.nav-topic-link').forEach(link => {
-                link.classList.toggle('active', link.textContent === currentTopic);
-            });
-
+            const t = REPORT_DATA[card.dataset.index].topic;
+            document.querySelectorAll('.nav-topic-link').forEach(l => l.classList.toggle('active', l.textContent === t));
             updateSidebar(REPORT_DATA[card.dataset.index].citations || []);
         }
-
         function updateSidebar(citations) {
             const sidebar = document.getElementById('sidebar-container');
             const content = document.getElementById('sidebar-content');
             sidebar.classList.remove('visible');
-            
             setTimeout(() => {
-                content.innerHTML = '';
-                if (citations.length === 0) {
-                    content.innerHTML = '<p class="text-gray-300 italic text-sm">No direct citations linked.</p>';
-                } else {
-                    citations.forEach(c => {
-                        content.innerHTML += `
-                            <div class="source-card">
-                                <div class="source-meta"><span>${c.source_platform} • ${c.date || 'Recent'}</span></div>
-                                <div class="text-black italic leading-relaxed text-xs">"${c.comment_text}"</div>
-                                <div class="mt-3"><a href="${c.comment_url}" target="_blank" class="text-xs text-red-600 font-bold hover:underline uppercase tracking-wide">see original&rarr;</a></div>
-                            </div>
-                        `;
-                    });
-                }
-                sidebar.classList.add('visible');
-                content.scrollTop = 0; // Always start at the top of a new citation list
+                content.innerHTML = citations.map(c => {
+                    // CONDITION: Use "FIND ORIGINAL" for app store sources
+                    const isStore = c.source_platform === 'App Store' || c.source_platform === 'Google Play';
+                    const linkText = isStore ? 'FIND ORIGINAL &rarr;' : 'SEE ORIGINAL &rarr;';
+                    return `<div class="source-card"><div class="source-meta"><span>${c.source_platform} • ${c.date || 'Recent'}</span></div><div class="text-black italic leading-relaxed text-xs">"${c.comment_text}"</div><div class="mt-3"><a href="${c.comment_url}" target="_blank" class="text-xs text-red-600 font-bold hover:underline uppercase tracking-wide">${linkText}</a></div></div>`;
+                }).join('');
+                sidebar.classList.add('visible'); 
+                content.scrollTop = 0; // Reset scroll position for new sets
             }, 100); 
         }
+        document.addEventListener('DOMContentLoaded', loadReport);
     </script>
 </body>
 </html>
