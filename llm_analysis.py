@@ -23,28 +23,44 @@ def process_data_with_llm(json_data):
     if not OPENROUTER_API_KEY:
         return "Error: OPENROUTER_API_KEY environment variable not set."
 
-    # --- STRATEGIC PRODUCT ANALYST PROMPT ---
+    # --- THE SKEPTIC'S ANCHOR (Absolute Truths) ---
+    # These prevent the AI from agreeing with users that "Ads are a bug" or "Teaser rates are scams"
+    PRODUCT_GROUND_TRUTH = """
+    ABSOLUTE PRODUCT TRUTHS (Use these to verify user claims):
+    1. ADS: Both Standard and Premium subscriptions ARE NOT ad-free. They include third-party ads and Economist promotions.
+    2. PRICING: Introductory 'teaser' rates ($1/week) are strictly time-bound. Renewal at the 'List Price' is the intended behavior.
+    3. RETENTION: Cancellation usually requires a manual workflow or support interaction; this is a business choice, not a technical bug.
+    4. ARCHIVE: Basic digital subscriptions do not include full historical archive access.
+    """
+
     SYSTEM_INSTRUCTION = (
-        "You are a Strategic Product Analyst for The Economist. Your goal is to translate raw user feedback "
-        "into actionable product insights that a Product Manager can use to drive roadmaps. "
-        "You must look past user vocabulary to identify the underlying product friction or business risk."
+        "You are a Senior Strategic Analyst. You operate in two phases:\n"
+        "PHASE 1 (The Skeptic): Review the user feedback against the provided 'Absolute Product Truths'. "
+        "Identify claims that are actually intended product behaviors rather than technical failures.\n"
+        "PHASE 2 (The Dashboard): Synthesize only the most actionable insights for a Product Manager."
     )
 
-    CUSTOM_PROMPT = (
-        "Analyze the input data to identify 10-15 distinct product insights. "
-        "\n\nSTRICT ANALYTICAL RULES:\n"
-        "1. THE 'SO WHAT?' FILTER: For every comment, ask: 'What does a PM need to fix here?' "
-        "Ignore the user's emotional tone and identify the root cause (e.g., instead of 'cancellation threats', "
-        "identify 'Manual retention workflows' or 'High renewal price sensitivity').\n"
-        "2. DYNAMIC TOPICS: Use 2-3 word technical/business categories (e.g., 'RETENTION LOGIC', 'DEVICE OPTIMIZATION', 'RENEWAL UI'). "
-        "NEVER use generic labels.\n"
-        "3. ACTIONABLE DESCRIPTION: Describe the friction point in a way that implies a product requirement. "
-        "Use **bolding** for the core technical or business issue.\n"
-        "4. AVOID REPEATING EMOTION EXPRESSED IN THE DATA.\n"
-        "5. FORMAT: 'TOPIC: Insight sentence with bolded friction [[ID1, ID2]]'.\n"
-        "6. SEPARATION: Exactly TWO blank lines between entries.\n\n"
-        "--- INPUT DATA ---\n"
-    )
+    CUSTOM_PROMPT = f"""
+    {PRODUCT_GROUND_TRUTH}
+
+    --- CORE TASK ---
+    Identify 10-15 strategic insights. Look past user vocabulary (like 'threaten', 'scam', 'broken') to find 
+    the underlying product friction or business opportunity.
+
+    STRICT ANALYTICAL RULES:
+    1. SKEPTICISM: If a user complains about intended behavior (e.g., ads or pricing), do NOT report it as a bug. 
+       Reframe it as an **Expectation Gap** or **Communication Failure**.
+    2. BEHAVIORAL SHIFT: Describe what users *do* (e.g., 'Users use VPNs to access lower regional pricing') 
+       rather than what they *say* (e.g., 'The app is expensive').
+    3. NO BOLDING TOPICS: Do not bold the Topic Name.
+    4. STRATEGIC BOLDING: **Bold** only the core product feature or business metric requiring PM attention.
+    5. BREVITY: Max 20 words per insight. One sentence only.
+    6. FORMAT: 'TOPIC: Insight sentence with **bolded component** [[ID1, ID2]]'.
+    7. SEPARATION: Put TWO blank lines between every entry.
+
+    --- INPUT DATA ---
+    {json_data}
+    """
     
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}", 
@@ -57,9 +73,9 @@ def process_data_with_llm(json_data):
         "model": MODEL_NAME, 
         "messages": [
             {"role": "system", "content": SYSTEM_INSTRUCTION}, 
-            {"role": "user", "content": CUSTOM_PROMPT + json_data}
+            {"role": "user", "content": CUSTOM_PROMPT}
         ], 
-        "temperature": 0.1 # Low temperature for consistent, analytical output
+        "temperature": 0.0001 # Keep it strictly logical
     }
 
     for attempt in range(MAX_RETRIES):
@@ -67,6 +83,7 @@ def process_data_with_llm(json_data):
             response = requests.post(OPENROUTER_API_URL, headers=headers, json=payload, timeout=300)
             response.raise_for_status()
             content = response.json()['choices'][0]['message']['content'].strip()
+            # Clean DeepSeek/Reasoning tags
             content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL).strip()
             return content
         except Exception as e:
@@ -84,7 +101,7 @@ def main():
     analysis = process_data_with_llm(json_data)
     with open(LLM_TEXT_OUTPUT, 'w', encoding='utf-8') as out_f:
         out_f.write(analysis)
-    print(f"✅ Strategic analysis saved to {LLM_TEXT_OUTPUT}")
+    print(f"✅ Skeptic-corrected analysis saved to {LLM_TEXT_OUTPUT}")
 
 if __name__ == "__main__":
     main()
