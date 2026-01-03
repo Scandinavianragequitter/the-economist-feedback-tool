@@ -25,41 +25,39 @@ def get_db_connection(db_path: str) -> Optional[sqlite3.Connection]:
 def fetch_citation_details(citation_id: str) -> Dict[str, Any]:
     prefix_match = re.match(r"(R|YT|AS|GP)_", citation_id)
     if not prefix_match: return {"id": citation_id, "comment_text": "Not found", "comment_url": "#"}
+    
     platform_key = prefix_match.group(1)
     config = DB_CONFIG.get(platform_key)
     conn = get_db_connection(config["db_path"])
     if not conn: return {"id": citation_id, "comment_text": "DB missing", "comment_url": "#"}
     
     sql_query = ""
+    # Map raw DB ID extraction
+    db_id_part = citation_id.split("_", 1)[1] if "_" in citation_id else citation_id
+    
     if platform_key == "R":
         db_id = citation_id.split(":")[-1]
-        sql_query = f"SELECT body AS comment_text, created_utc AS date, post_id FROM reddit_comments WHERE comment_id = '{db_id}'"
+        sql_query = f"SELECT body AS comment_text, created_utc AS date, 'https://reddit.com/comments/' || post_id || '/_/' || comment_id AS comment_url FROM reddit_comments WHERE comment_id = '{db_id}'"
     elif platform_key == "YT":
-        db_id = citation_id.split("_", 1)[1]
-        sql_query = f"SELECT text_display AS comment_text, published_at AS date, video_id FROM youtube_comments WHERE comment_id = '{db_id}'"
+        sql_query = f"SELECT text_display AS comment_text, published_at AS date, 'https://youtube.com/watch?v=' || video_id AS comment_url FROM youtube_comments WHERE comment_id = '{db_id_part}'"
     elif platform_key == "AS":
-        db_id = citation_id.split("_")[-1] 
-        sql_query = f'SELECT "Review Text" AS comment_text, "Review Date" AS date, "Review URL" AS comment_url FROM economist_reviews WHERE "Review ID" = {db_id}'
+        sql_query = f'SELECT "Review Text" AS comment_text, "Review Date" AS date, "Review URL" AS comment_url FROM economist_reviews WHERE "Review ID" = {db_id_part.split("_")[-1]}'
     elif platform_key == "GP":
-        db_id = citation_id.split("_", 1)[1]
-        sql_query = f"SELECT {config['text_col']} AS comment_text, {config['date_col']} AS date, {config['url_col']} AS comment_url FROM {config['table']} WHERE {config['id_col']} = '{db_id}'"
+        sql_query = f"SELECT {config['text_col']} AS comment_text, {config['date_col']} AS date, {config['url_col']} AS comment_url FROM {config['table']} WHERE {config['id_col']} = '{db_id_part}'"
 
     try:
         cursor = conn.execute(sql_query); row = cursor.fetchone()
         if row:
             result = dict(row)
-            # --- CONVERT TIMESTAMP TO DATE ---
             raw_date = result.get('date')
             formatted_date = "Recent"
             try:
-                # Handle Unix timestamps (e.g., 1765050154.0)
+                # Unix timestamp conversion fix
                 if isinstance(raw_date, (int, float)) or (isinstance(raw_date, str) and raw_date.replace('.','',1).isdigit()):
                     formatted_date = datetime.datetime.fromtimestamp(float(raw_date)).strftime('%Y-%m-%d')
                 else:
-                    # Handle existing ISO strings
                     formatted_date = str(raw_date).split(' ')[0]
-            except: 
-                formatted_date = str(raw_date) if raw_date else "Recent"
+            except: formatted_date = "Recent"
             
             return {
                 "id": citation_id, 

@@ -11,7 +11,7 @@
             --primary-red: #E3120B; --bg-white: #FFFFFF; --text-black: #111111;
             --header-bg: #000000; --header-text: #FFFFFF; --header-height: 8rem;
         }
-        body { font-family: 'Inter', sans-serif; background-color: var(--bg-white); color: var(--text-black); margin: 0; padding: 0; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-white); color: var(--text-black); margin: 0; padding: 0; overflow-x: hidden; }
         
         #main-header { position: fixed; top: 0; left: 0; right: 0; height: var(--header-height); background-color: var(--header-bg); z-index: 100; display: flex; flex-direction: column; justify-content: space-between; padding: 0 2rem; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
         .header-top { display: flex; justify-content: space-between; align-items: center; height: 60%; border-bottom: 1px solid #333; }
@@ -22,26 +22,29 @@
         .header-stats { height: 40%; display: flex; align-items: center; justify-content: center; gap: 2rem; font-size: 0.85rem; color: #888; }
         .stat-val { color: var(--primary-red); font-weight: 700; margin-left: 0.25rem; }
 
-        #explorer-container { margin-top: var(--header-height); flex: 1; display: grid; grid-template-columns: 1fr 480px; overflow: hidden; }
+        #content-wrapper { margin-top: var(--header-height); padding: 3rem 2rem; display: flex; flex-direction: column; align-items: center; min-height: calc(100vh - var(--header-height)); }
         
-        /* Left Panel: Search UI */
-        #search-panel { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; border-right: 1px solid #EEE; }
-        #search-input-wrapper { width: 100%; max-width: 600px; position: relative; }
-        #query-input { width: 100%; padding: 1.25rem; padding-right: 4rem; border: 2px solid #EEE; border-radius: 12px; font-size: 1.1rem; outline: none; transition: border-color 0.2s; }
+        /* Search Area */
+        #search-box-container { width: 100%; max-width: 700px; margin-bottom: 3rem; text-align: center; }
+        #input-group { position: relative; width: 100%; }
+        #query-input { width: 100%; padding: 1.2rem 1.5rem; padding-right: 5rem; border: 1px solid #DDD; border-radius: 50px; font-size: 1.1rem; box-shadow: 0 4px 15px rgba(0,0,0,0.05); outline: none; transition: border-color 0.2s; }
         #query-input:focus { border-color: var(--primary-red); }
-        #search-btn { position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); background: var(--primary-red); color: white; padding: 0.5rem 1rem; border-radius: 8px; font-weight: 600; cursor: pointer; }
+        #search-btn { position: absolute; right: 0.6rem; top: 50%; transform: translateY(-50%); background: var(--primary-red); color: white; border-radius: 50px; padding: 0.6rem 1.2rem; font-weight: 700; font-size: 0.8rem; cursor: pointer; }
 
-        /* Quick Query Pills */
-        #example-queries { display: flex; gap: 1rem; margin-top: 1.5rem; flex-wrap: wrap; justify-content: center; }
-        .example-pill { background: #F3F4F6; color: #4B5563; padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.85rem; cursor: pointer; border: 1px solid transparent; transition: all 0.2s; }
-        .example-pill:hover { border-color: var(--primary-red); color: var(--primary-red); background: #FFF; }
+        #example-queries { display: flex; gap: 0.75rem; margin-top: 1.2rem; flex-wrap: wrap; justify-content: center; }
+        .pill { background: #F3F4F6; color: #666; padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; border: 1px solid transparent; }
+        .pill:hover { border-color: var(--primary-red); color: var(--primary-red); background: white; }
 
-        /* Right Panel: Citations List */
-        #results-panel { background: #FAFAFA; padding: 2rem; overflow-y: auto; scrollbar-width: thin; }
-        .result-card { background: #FFF; border: 1px solid #DDD; padding: 1.2rem; border-radius: 8px; margin-bottom: 1.2rem; border-left: 4px solid var(--primary-red); box-shadow: 0 2px 8px rgba(0,0,0,0.04); position: relative; overflow-wrap: anywhere; }
-        .result-meta { display: flex; justify-content: space-between; font-size: 0.65rem; color: #999; margin-bottom: 0.8rem; text-transform: uppercase; font-weight: 700; }
-        .bookmark-btn { position: absolute; top: 1rem; right: 1rem; cursor: pointer; color: #CCC; transition: color 0.2s; }
-        .bookmark-btn.active { color: var(--primary-red); }
+        /* Results Grid */
+        #results-grid { width: 100%; max-width: 1000px; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; padding-bottom: 5rem; }
+        .result-card { background: #FFF; border: 1px solid #EEE; border-left: 4px solid var(--primary-red); padding: 1.5rem; border-radius: 8px; position: relative; display: flex; flex-direction: column; justify-content: space-between; transition: transform 0.2s; }
+        .result-card:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
+        
+        .card-meta { display: flex; justify-content: space-between; font-size: 0.65rem; font-weight: 700; color: #999; text-transform: uppercase; margin-bottom: 1rem; }
+        .card-text { font-style: italic; font-size: 0.95rem; line-height: 1.6; color: #333; margin-bottom: 1.5rem; overflow-wrap: anywhere; }
+        
+        .bookmark-icon { position: absolute; top: 1.2rem; right: 1.2rem; cursor: pointer; color: #DDD; transition: color 0.2s; }
+        .bookmark-icon.active { color: var(--primary-red); }
 
         .header-title a { color: var(--header-text); text-decoration: none; }
     </style>
@@ -66,77 +69,73 @@
         </div>
     </header>
 
-    <div id="explorer-container">
-        <div id="search-panel">
-            <div id="search-input-wrapper">
-                <input type="text" id="query-input" placeholder="Search audience sentiment...">
-                <button id="search-btn">ASK</button>
+    <div id="content-wrapper">
+        <div id="search-box-container">
+            <div id="input-group">
+                <input type="text" id="query-input" placeholder="Ask about audience sentiment...">
+                <button id="search-btn">EXPLORE</button>
             </div>
             <div id="example-queries">
-                <div class="example-pill">Show me just feedback on Audio.</div>
-                <div class="example-pill">What do readers think about AI features?</div>
-                <div class="example-pill">What do readers think about Gaza coverage?</div>
+                <div class="pill">Show me just feedback on Audio.</div>
+                <div class="pill">What do readers think about AI features?</div>
+                <div class="pill">What do readers think about Gaza coverage?</div>
             </div>
         </div>
-        <div id="results-panel">
-            <div id="results-content">
-                <p class="text-center text-gray-400 mt-20">Enter a query to explore commentary.</p>
+
+        <div id="results-grid">
             </div>
-        </div>
     </div>
 
     <script>
-        const queryInput = document.getElementById('query-input');
-        const resultsContent = document.getElementById('results-content');
-        const examplePills = document.querySelectorAll('.example-pill');
+        const input = document.getElementById('query-input');
+        const grid = document.getElementById('results-grid');
 
         // Handle Quick Query Pills
-        examplePills.forEach(pill => {
+        document.querySelectorAll('.pill').forEach(pill => {
             pill.addEventListener('click', () => {
-                queryInput.value = pill.innerText;
+                input.value = pill.innerText;
                 performSearch();
             });
         });
 
         document.getElementById('search-btn').addEventListener('click', performSearch);
-        queryInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') performSearch(); });
+        input.addEventListener('keypress', (e) => { if (e.key === 'Enter') performSearch(); });
 
         async function performSearch() {
-            const query = queryInput.value.trim();
+            const query = input.value.trim();
             if (!query) return;
-
-            resultsContent.innerHTML = '<p class="text-center text-gray-400 mt-20">Searching databases...</p>';
-
+            grid.innerHTML = '<p class="col-span-full text-center text-gray-400 mt-10">Understanding the meaning of your query...</p>';
+            
             try {
                 const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
                 const results = await response.json();
                 renderResults(results);
             } catch (e) {
-                resultsContent.innerHTML = '<p class="text-center text-red-500 mt-20">Error connecting to explorer.</p>';
+                grid.innerHTML = '<p class="col-span-full text-center text-red-500 mt-10">Error connecting to database explorer.</p>';
             }
         }
 
         function renderResults(results) {
-            if (results.length === 0) {
-                resultsContent.innerHTML = '<p class="text-center text-gray-400 mt-20">No matching commentary found.</p>';
+            if (!results || results.length === 0) {
+                grid.innerHTML = '<p class="col-span-full text-center text-gray-400 mt-10">No specific matching commentary found.</p>';
                 return;
             }
 
             const saved = JSON.parse(localStorage.getItem('saved_comments') || '[]');
 
-            resultsContent.innerHTML = results.map(c => {
+            grid.innerHTML = results.map(c => {
                 const isBookmarked = saved.some(s => s.id === c.id);
                 const isStore = c.source_platform === 'App Store' || c.source_platform === 'Google Play';
                 const linkText = isStore ? 'FIND ORIGINAL' : 'SEE ORIGINAL';
                 
                 return `
                     <div class="result-card">
-                        <div class="result-meta"><span>${c.source_platform} • ${c.date || 'Recent'}</span></div>
-                        <div class="bookmark-btn ${isBookmarked ? 'active' : ''}" onclick="toggleBookmark(this, '${c.id}', '${btoa(JSON.stringify(c))}')">
-                            <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg>
+                        <div class="bookmark-icon ${isBookmarked ? 'active' : ''}" onclick="toggleBookmark(this, '${c.id}', '${btoa(JSON.stringify(c))}')">
+                            <svg width="22" height="22" fill="currentColor" viewBox="0 0 24 24"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg>
                         </div>
-                        <div class="text-black italic leading-relaxed text-xs">"${c.comment_text}"</div>
-                        <div class="mt-3"><a href="${c.comment_url}" target="_blank" class="text-xs text-red-600 font-bold hover:underline uppercase tracking-wide">${linkText} &rarr;</a></div>
+                        <div class="card-meta"><span>${c.source_platform}</span><span>${c.date || 'Recent'}</span></div>
+                        <div class="card-text">"${c.comment_text}"</div>
+                        <div><a href="${c.comment_url}" target="_blank" class="text-xs text-red-600 font-bold hover:underline uppercase tracking-widest">${linkText} &rarr;</a></div>
                     </div>
                 `;
             }).join('');
@@ -144,14 +143,11 @@
 
         function toggleBookmark(btn, id, encodedData) {
             let saved = JSON.parse(localStorage.getItem('saved_comments') || '[]');
-            const exists = saved.findIndex(s => s.id === id);
-
-            if (exists > -1) {
-                saved.splice(exists, 1);
-                btn.classList.remove('active');
+            const idx = saved.findIndex(s => s.id === id);
+            if (idx > -1) {
+                saved.splice(idx, 1); btn.classList.remove('active');
             } else {
-                saved.push(JSON.parse(atob(encodedData)));
-                btn.classList.add('active');
+                saved.push(JSON.parse(atob(encodedData))); btn.classList.add('active');
             }
             localStorage.setItem('saved_comments', JSON.stringify(saved));
         }
@@ -161,6 +157,7 @@
                 const response = await fetch("/api/source_counts");
                 if (response.ok) {
                     const counts = await response.json();
+                    // Fix mapping keys to match your DB logic
                     document.getElementById('count-reddit').textContent = counts['Reddit'] || 0;
                     document.getElementById('count-youtube').textContent = counts['YouTube'] || 0;
                     document.getElementById('count-ios').textContent = counts['AppStore'] || 0;
@@ -168,7 +165,6 @@
                 }
             } catch (e) {}
         }
-
         document.addEventListener('DOMContentLoaded', loadSourceCounts);
     </script>
 </body>
