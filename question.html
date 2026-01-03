@@ -19,17 +19,18 @@
         }
 
         html, body {
-            height: 100%;
+            height: 100vh;
             overflow: hidden; 
+            margin: 0;
+            padding: 0;
         }
 
         body {
             font-family: 'Inter', sans-serif;
             background-color: var(--bg-white); 
             color: var(--text-black);
-            margin: 0;
-            padding: 0;
-            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
         }
         
         #main-header {
@@ -84,15 +85,30 @@
         }
         .stat-val { color: var(--primary-red); font-weight: 700; margin-left: 0.25rem; }
         
+        /* Layout fix: Content is now centered and constrained to the viewport */
         #content-wrapper {
+            margin-top: var(--header-height);
             height: calc(100vh - var(--header-height));
-            padding-top: var(--header-height); 
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 12rem 1rem;
-            max-width: 900px; 
-            margin: 0 auto; 
+            justify-content: center;
+            padding: 2rem; /* Reasonable padding */
+            box-sizing: border-box;
+        }
+        
+        .large-text-area {
+            width: 100%;
+            max-width: 900px;
+            height: 100%; /* Take up available space */
+            background-color: #f9fafb; 
+            border: 1px solid #e5e7eb;
+            padding: 2rem;
+            border-radius: 8px;
+            text-align: justify;
+            font-size: 1.1rem;
+            line-height: 1.6;
+            overflow-y: auto; /* Internal scrolling only */
         }
         
         .doc-section {
@@ -105,19 +121,6 @@
             font-weight: 700;
             margin-bottom: 0.5rem;
             color: var(--text-black);
-        }
-        
-        .large-text-area {
-            width: 100%;
-            background-color: #f9fafb; 
-            border: 1px solid #e5e7eb;
-            padding: 1.5rem;
-            border-radius: 8px;
-            text-align: justify;
-            font-size: 1.1rem;
-            line-height: 1.6;
-            max-height: 100%; 
-            overflow-y: auto; 
         }
         
         .header-title a {
@@ -195,12 +198,13 @@
             <div class="doc-section">
                 <h2>About the developer</h2>
                 <p>
-                    This project was developed by Carl Jacob Ziesemer, a second year university student at TU Munich. He is a big admirer of The Economist for its focus on deep dive analyses as well as its efforts to innovate. He'd love to have a discussion with someone at The Economist about this project and to learn more about their exiting work. Feel free to reach out via LinkedIn: <a href=linkedin.com/in/carlziesemer target="_blank" rel="noopener noreferrer" class="text-blue-600 underline">linkedin.com/in/carlziesemer</a> or email: <a href="mailto: carlziesemer@gmail.com" class="text-blue-600 underline">
+                    This project was developed by Carl Jacob Ziesemer, a second year university student at TU Munich. He is a big admirer of The Economist for its focus on deep dive analyses as well as its efforts to innovate. He'd love to have a discussion with someone at The Economist about this project and to learn more about their exiting work. Feel free to reach out via LinkedIn: <a href="https://linkedin.com/in/carlziesemer" target="_blank" rel="noopener noreferrer" class="text-blue-600 underline">linkedin.com/in/carlziesemer</a> or email: <a href="mailto:carlziesemer@gmail.com" class="text-blue-600 underline">carlziesemer@gmail.com</a>
+                </p>
+            </div>
         </div>
     </div>
 
     <script>
-        // PRODUCTION FIX: Relative path for Render
         const API_BASE_URL = ""; 
         const COUNT_ENDPOINT = API_BASE_URL + "/api/source_counts";
         
@@ -211,8 +215,8 @@
                     const counts = await response.json();
                     document.getElementById('count-reddit').textContent = counts['Reddit'] || 0;
                     document.getElementById('count-youtube').textContent = counts['YouTube'] || 0;
-                    document.getElementById('count-ios').textContent = counts['iOS'] || 0;
-                    document.getElementById('count-gp').textContent = counts['GP'] || 0;
+                    document.getElementById('count-ios').textContent = counts['AppStore'] || 0;
+                    document.getElementById('count-gp').textContent = counts['GooglePlay'] || 0;
                 }
             } catch (e) { 
                 console.warn("Error loading source counts:", e);
