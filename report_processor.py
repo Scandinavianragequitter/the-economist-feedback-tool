@@ -31,6 +31,7 @@ def fetch_citation_details(citation_id: str) -> Dict[str, Any]:
     config = DB_CONFIG.get(platform_key)
     conn = get_db_connection(config["db_path"])
     
+    # PROCESSOR CHANGE 1: Return generic info with platform name if DB is missing
     if not conn: 
         return {"id": citation_id, "comment_text": "DB missing", "comment_url": "#", "source_platform": config['platform_name'], "date": "Recent"}
     
@@ -53,16 +54,13 @@ def fetch_citation_details(citation_id: str) -> Dict[str, Any]:
             result = dict(row)
             raw_date = result.get('date')
             formatted_date = "Recent"
-            
             try:
-                # CHANGE 2: Robust Unix timestamp check (handles decimals)
-                val_str = str(raw_date).strip()
-                if val_str and val_str.replace('.', '', 1).isdigit():
-                    formatted_date = datetime.datetime.fromtimestamp(float(val_str)).strftime('%Y-%m-%d')
+                # Robust Unix timestamp conversion
+                if isinstance(raw_date, (int, float)) or (isinstance(raw_date, str) and raw_date.replace('.','',1).isdigit()):
+                    formatted_date = datetime.datetime.fromtimestamp(float(raw_date)).strftime('%Y-%m-%d')
                 else:
-                    formatted_date = val_str.split(' ')[0] if val_str else "Recent"
-            except: 
-                formatted_date = "Recent"
+                    formatted_date = str(raw_date).split(' ')[0]
+            except: formatted_date = "Recent"
             
             return {
                 "id": citation_id, 
@@ -72,10 +70,9 @@ def fetch_citation_details(citation_id: str) -> Dict[str, Any]:
                 "date": formatted_date
             }
     except: pass
-    finally:
-        if conn: conn.close()
+    finally: conn.close()
     
-    # CHANGE 3: Expanded fallback dictionary keys
+    # PROCESSOR CHANGE 2: Return fallback with platform name to prevent "undefined" on dashboard
     return {"id": citation_id, "comment_text": "Not found", "comment_url": "#", "source_platform": config['platform_name'], "date": "Recent"}
 
 def parse_report(raw_text):
