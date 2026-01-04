@@ -24,12 +24,15 @@ def get_db_connection(db_path: str) -> Optional[sqlite3.Connection]:
 
 def fetch_citation_details(citation_id: str) -> Dict[str, Any]:
     prefix_match = re.match(r"(R|YT|AS|GP)_", citation_id)
-    if not prefix_match: return {"id": citation_id, "comment_text": "Not found", "comment_url": "#"}
+    if not prefix_match: 
+        return {"id": citation_id, "comment_text": "Not found", "comment_url": "#", "source_platform": "Unknown", "date": "Recent"}
     
     platform_key = prefix_match.group(1)
     config = DB_CONFIG.get(platform_key)
     conn = get_db_connection(config["db_path"])
-    if not conn: return {"id": citation_id, "comment_text": "DB missing", "comment_url": "#"}
+    
+    if not conn: 
+        return {"id": citation_id, "comment_text": "DB missing", "comment_url": "#", "source_platform": config['platform_name'], "date": "Recent"}
     
     sql_query = ""
     db_id_part = citation_id.split("_", 1)[1] if "_" in citation_id else citation_id
@@ -52,15 +55,15 @@ def fetch_citation_details(citation_id: str) -> Dict[str, Any]:
             formatted_date = "Recent"
             
             try:
-                # UPDATED: Robust Unix timestamp detection for Reddit/YT
-                clean_val = str(raw_date).strip()
-                # Check if it looks like a timestamp (numeric and significant length)
-                if clean_val.replace('.', '', 1).isdigit() and len(clean_val.split('.')[0]) >= 10:
-                    formatted_date = datetime.datetime.fromtimestamp(float(clean_val)).strftime('%Y-%m-%d')
+                # FIXED: Highly robust conversion for Unix timestamps (Reddit)
+                val_str = str(raw_date).strip()
+                if val_str and val_str.replace('.', '', 1).isdigit():
+                    # Attempt conversion from float/int timestamp
+                    formatted_date = datetime.datetime.fromtimestamp(float(val_str)).strftime('%Y-%m-%d')
                 else:
-                    # Fallback for standard ISO strings from App Stores
-                    formatted_date = str(raw_date).split(' ')[0]
-            except:
+                    # Fallback for ISO strings (App Store / Google Play)
+                    formatted_date = val_str.split(' ')[0] if val_str else "Recent"
+            except: 
                 formatted_date = "Recent"
             
             return {
@@ -72,6 +75,7 @@ def fetch_citation_details(citation_id: str) -> Dict[str, Any]:
             }
     except: pass
     finally: conn.close()
+    
     return {"id": citation_id, "comment_text": "Not found", "comment_url": "#", "source_platform": config['platform_name'], "date": "Recent"}
 
 def parse_report(raw_text):
@@ -83,11 +87,12 @@ def parse_report(raw_text):
         for match in citation_matches: ids.extend([cid.strip() for cid in match.split(',')])
         clean_text = re.sub(r"\[\[.*?\]\]", "", p).strip()
         
-        topic = "GENERAL"; insight = clean_text
-        if ":" in clean_text[:30]:
-            parts = clean_text.split(":", 1)
-            topic = parts[0].strip().upper()
-            insight = parts[1].strip()
+        if ":" in clean_text[:25]:
+            topic_part, insight_part = clean_text.split(":", 1)
+            topic = topic_part.strip().upper()
+            insight = insight_part.strip()
+        else:
+            topic = "GENERAL"; insight = clean_text
 
         parsed.append({
             "topic": topic,
