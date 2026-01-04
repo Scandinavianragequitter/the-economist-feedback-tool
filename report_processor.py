@@ -55,13 +55,11 @@ def fetch_citation_details(citation_id: str) -> Dict[str, Any]:
             formatted_date = "Recent"
             
             try:
-                # FIXED: Highly robust conversion for Unix timestamps (Reddit)
+                # FIXED: Handles Reddit float timestamps (e.g. 1764497400.0)
                 val_str = str(raw_date).strip()
                 if val_str and val_str.replace('.', '', 1).isdigit():
-                    # Attempt conversion from float/int timestamp
                     formatted_date = datetime.datetime.fromtimestamp(float(val_str)).strftime('%Y-%m-%d')
                 else:
-                    # Fallback for ISO strings (App Store / Google Play)
                     formatted_date = val_str.split(' ')[0] if val_str else "Recent"
             except: 
                 formatted_date = "Recent"

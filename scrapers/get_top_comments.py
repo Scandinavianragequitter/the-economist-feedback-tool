@@ -5,7 +5,7 @@ import os
 from typing import List, Dict, Any, Optional
 
 # ==============================================================================
-# CONFIGURATION - UPDATED FOR PERSISTENT STORAGE
+# CONFIGURATION - RESTORED ORIGINAL RENDER PATHS
 # ==============================================================================
 DATA_DIR = os.environ.get("PERSISTENT_STORAGE_PATH", "data")
 
@@ -52,7 +52,7 @@ def get_top_reddit_data(conn):
         return []
     
     placeholders = ','.join('?' for _ in top_post_ids)
-    # UPDATED: Select created_utc to ensure date availability
+    # ADDED: Fetch created_utc
     cursor.execute(f"""
         SELECT comment_id, post_id, body, created_utc
         FROM reddit_comments
@@ -65,7 +65,7 @@ def get_top_reddit_data(conn):
         flattened_reddit_comments.append({
             "id": full_verifiable_id,
             "text": body.strip(),
-            "date": created_utc
+            "date": created_utc # Pass through to JSON
         })
 
     print(f"✅ Extracted {len(flattened_reddit_comments)} Reddit comments.")
@@ -95,9 +95,11 @@ def get_google_play_reviews(conn):
     if not conn: return []
     cursor = conn.cursor()
     flattened_reviews = []
+    # Using your original working Google Play query
     cursor.execute("SELECT review_id, review_text, score FROM google_play_reviews ORDER BY review_date DESC LIMIT ?", (GP_REVIEW_LIMIT,))
     for rid, text, rating in cursor.fetchall():
-        flattened_reviews.append({"id": f"GP_{rid}", "text": f"Rating: {rating}/5\n\n{text}".strip()})
+        combined_text = f"Rating: {rating}/5\n\n{(text.strip() if text else '')}".strip()
+        flattened_reviews.append({"id": f"GP_{rid}", "text": combined_text})
     print(f"✅ Extracted {len(flattened_reviews)} Google Play reviews.")
     return flattened_reviews
 
