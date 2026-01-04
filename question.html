@@ -82,7 +82,7 @@
             display: flex; align-items: center; justify-content: center;
             gap: 2rem;
             font-size: 0.85rem;
-            color: #888;
+            color: #FFFFFF; /* CHANGED: Reddit, YouTube, etc. titles now white */
         }
         .stat-val { color: var(--primary-red); font-weight: 700; margin-left: 0.25rem; }
         
@@ -92,7 +92,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center; /* Center the content vertically in the remaining space */
+            justify-content: center; 
             padding: 1rem 2rem; 
             box-sizing: border-box;
         }
@@ -100,7 +100,6 @@
         .large-text-area {
             width: 100%;
             max-width: 900px;
-            /* Allow internal scrolling only if the screen height is extremely small */
             max-height: 100%; 
             background-color: transparent; 
             border: none; 
@@ -108,7 +107,7 @@
             font-size: 1.05rem;
             line-height: 1.5;
             overflow-y: auto; 
-            scrollbar-width: none; /* Hide scrollbar for a clean look */
+            scrollbar-width: none; 
         }
 
         .large-text-area::-webkit-scrollbar {
@@ -118,7 +117,7 @@
         .doc-section {
             border-left: 3px solid var(--primary-red);
             padding-left: 1.5rem;
-            margin-bottom: 1.5rem; /* Tightened margins to fit on screen */
+            margin-bottom: 1.5rem; 
         }
         
         .doc-section h2 {
@@ -130,7 +129,17 @@
             letter-spacing: 0.05em;
         }
 
-        /* Links in Red as requested */
+        /* Styling for the new navigation links in titles */
+        .doc-section h2 a {
+            color: inherit;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .doc-section h2 a:hover {
+            color: var(--primary-red);
+        }
+
         .doc-section a {
             color: var(--primary-red);
             text-decoration: underline;
@@ -162,7 +171,7 @@
             </a>
             
             <div class="header-title">
-                <a href="final_design.html">Audience Feedback</a>
+                <a href="question.html">Audience Feedback</a>
             </div>
             
             <div class="flex items-center" style="gap: 1rem;"> 
@@ -200,13 +209,13 @@
     <div id="content-wrapper">
         <div class="large-text-area">
             <div class="doc-section">
-                <h2>Dashboard Overview</h2>
+                <h2><a href="final_design.html">↗︎ Dashboard Overview</a></h2>
                 <p>
-                    This dashboard shows last month's audience feedback on The Economist's offerings retrieved from Reddit, The Economist on Youtube and The Economist App on the iOS App Store and the Google Play Store. <br>AI automatically finds common critique and pain points as expressed in the data and aims to generate actionable insights for teams at The Economist to improve the publication. 
+                    This dashboard shows last month's feedback on The Economist's offerings retrieved from reader's comments on Reddit, The Economist on Youtube and The Economist App on the iOS App Store and the Google Play Store. <br>AI automatically finds common critique and pain points as expressed in the data and aims to generate actionable insights for teams at The Economist to improve the publication. 
                 </p>
             </div>
             <div class="doc-section">
-                <h2>Explorer "Chatbot"</h2>
+                <h2><a href="comment_filter.html">↗︎ Explorer "Chatbot"</a></h2>
                 <p>
                     The Explorer uses Semantic Search (Natural Language) for you to find commentary according to custom categories.
                 </p>
@@ -214,13 +223,13 @@
             <div class="doc-section">
                 <h2>About the developer</h2>
                 <p>
-                    This project was developed by Carl Jacob Ziesemer, a second year university student at TU Munich. He is a big admirer of The Economist for its focus on deep dive analyses as well as its efforts to use AI to improve their publication. 
+                    This project was developed by Carl Jacob Ziesemer, a second year university student at TU Munich. He is a big admirer of The Economist for its focus on deep dive analyses as well as its efforts to use AI to improve the publication. 
                 </p>
                 <p> 
                     An avid reader of The Economist, he noticed that many readers express high level thoughts about their UX with The Economist across platforms. The aim of this dashboard is to make these accessible and curated for maximum usefulness.
                 </p>
                 <p>
-                    He'd love to have a discussion with someone at The Economist about this project and to learn more about their exiting work and whether something like this dashboard is already used at the Economist. Feel free to reach out via LinkedIn: <a href="https://linkedin.com/in/carlziesemer" target="_blank" rel="noopener noreferrer">linkedin.com/in/carlziesemer</a> or email: <a href="mailto:carlziesemer@gmail.com">carlziesemer@gmail.com</a>.
+                    He'd love to have a discussion with someone at The Economist about this project, to learn more about their exiting work and whether something like this dashboard is already being used internally. Feel free to reach out via LinkedIn: <a href="https://linkedin.com/in/carlziesemer" target="_blank" rel="noopener noreferrer">linkedin.com/in/carlziesemer</a> or email: <a href="mailto:carlziesemer@gmail.com">carlziesemer@gmail.com</a>.
                 </p>
             </div>
         </div>
