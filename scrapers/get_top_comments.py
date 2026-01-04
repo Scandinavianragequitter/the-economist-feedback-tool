@@ -1,26 +1,32 @@
 import sqlite3
 import json
 import sys
+import os
+from typing import List, Dict, Any, Optional
 
 # ==============================================================================
-# CONFIGURATION
+# CONFIGURATION - UPDATED FOR PERSISTENT STORAGE
 # ==============================================================================
-REDDIT_DB = "reddit_data.db"
-YOUTUBE_DB = "youtube_comments.db"
-APP_STORE_DB = "app_reviews.db"
+DATA_DIR = os.environ.get("PERSISTENT_STORAGE_PATH", "data")
+
+REDDIT_DB = os.path.join(DATA_DIR, "reddit_data.db")
+YOUTUBE_DB = os.path.join(DATA_DIR, "youtube_comments.db")
+APP_STORE_DB = os.path.join(DATA_DIR, "app_reviews.db")
+GOOGLE_PLAY_DB = os.path.join(DATA_DIR, "google_play_reviews.db")
 
 # --- Quantitative Limits ---
 REDDIT_POST_LIMIT = 200      
 YT_COMMENT_LIMIT = 200      
 APP_REVIEW_LIMIT = 500      
+GP_REVIEW_LIMIT = 500 
 
-# --- Output Configuration ---
-OUTPUT_FILENAME = "curated_data_for_llm.json" 
+OUTPUT_FILENAME = os.path.join(DATA_DIR, "curated_data_for_llm.json") 
 # ==============================================================================
 
-
-def connect_db(db_name):
+def connect_db(db_name: str) -> Optional[sqlite3.Connection]:
     """Establishes a connection to a specific database."""
+    if not os.path.exists(db_name):
+        return None
     try:
         conn = sqlite3.connect(db_name)
         return conn
@@ -28,174 +34,97 @@ def connect_db(db_name):
         return None
 
 def get_top_reddit_data(conn):
-    """
-    Fetches the top N posts and their comments, returning a FLATTENED list of
-    only {id, text} for all associated comments.
-    """
+    """Fetches top Reddit posts and their comments, including timestamps."""
     if not conn:
-        print(f"Skipping Reddit: '{REDDIT_DB}' not found.")
+        print(f"Skipping Reddit: DB not found.")
         return []
 
     cursor = conn.cursor()
     flattened_reddit_comments = []
 
-    # 1. Identify the top N posts by score (upvotes)
     cursor.execute("""
-        SELECT post_id
-        FROM reddit_posts
-        ORDER BY score DESC
-        LIMIT ?
+        SELECT post_id FROM reddit_posts
+        ORDER BY score DESC LIMIT ?
     """, (REDDIT_POST_LIMIT,))
     top_post_ids = [p[0] for p in cursor.fetchall()]
     
     if not top_post_ids:
-        print("No high-scoring Reddit posts found.")
         return []
     
-    # 2. Fetch ALL comments associated with these top N posts
     placeholders = ','.join('?' for _ in top_post_ids)
-    
+    # UPDATED: Select created_utc to ensure date availability
     cursor.execute(f"""
-        SELECT comment_id, post_id, body
+        SELECT comment_id, post_id, body, created_utc
         FROM reddit_comments
         WHERE post_id IN ({placeholders})
         ORDER BY score DESC
     """, tuple(top_post_ids))
     
-    all_comments = cursor.fetchall()
-    
-    # 3. Restructure: Flatten and extract ONLY ID and body
-    for comment_id, post_id, body in all_comments:
-        # Construct the full, verifiable ID here (R_[post_id]:[comment_id])
+    for comment_id, post_id, body, created_utc in cursor.fetchall():
         full_verifiable_id = f"R_{post_id}:{comment_id}"
-
         flattened_reddit_comments.append({
             "id": full_verifiable_id,
-            "text": body.strip()
+            "text": body.strip(),
+            "date": created_utc
         })
 
-    print(f"✅ Extracted and flattened {len(flattened_reddit_comments)} Reddit comments.")
+    print(f"✅ Extracted {len(flattened_reddit_comments)} Reddit comments.")
     return flattened_reddit_comments
 
 def get_top_youtube_data(conn):
-    """
-    Fetches the top N most liked comments from the YouTube database, 
-    returning a FLATTENED list of only {id, text}.
-    """
-    if not conn:
-        print(f"Skipping YouTube: '{YOUTUBE_DB}' not found.")
-        return []
-
+    if not conn: return []
     cursor = conn.cursor()
     flattened_youtube_comments = []
-
-    # SQL Query: Filters top N comments by like_count
-    query = f"""
-        SELECT 
-            T1.text_display,
-            T1.comment_id          
-        FROM youtube_comments T1
-        ORDER BY T1.like_count DESC
-        LIMIT ?
-    """
-    
-    cursor.execute(query, (YT_COMMENT_LIMIT,))
-    
-    for body, comment_id in cursor.fetchall():
-        # Construct the full, verifiable ID here (YT_[comment_id])
-        full_verifiable_id = f"YT_{comment_id}"
-
-        flattened_youtube_comments.append({
-            "id": full_verifiable_id,
-            "text": body.strip()
-        })
-
-    print(f"✅ Extracted and flattened {len(flattened_youtube_comments)} top YouTube comments.")
+    cursor.execute("SELECT text_display, comment_id FROM youtube_comments ORDER BY like_count DESC LIMIT ?", (YT_COMMENT_LIMIT,))
+    for body, cid in cursor.fetchall():
+        flattened_youtube_comments.append({"id": f"YT_{cid}", "text": body.strip()})
+    print(f"✅ Extracted {len(flattened_youtube_comments)} Youtube comments.")
     return flattened_youtube_comments
 
-# --- NEW FUNCTION FOR APP STORE REVIEWS ---
 def get_app_store_reviews(conn):
-    """
-    Fetches recent app store reviews, returning a FLATTENED list of only {id, text}
-    (concatenating title and review text).
-    """
-    if not conn:
-        print(f"Skipping App Store: '{APP_STORE_DB}' not found.")
-        return []
-
+    if not conn: return []
     cursor = conn.cursor()
     flattened_reviews = []
-    
-    query = f"""
-        SELECT 
-            "Review ID", 
-            "Review Title", 
-            "Review Text"
-        FROM economist_reviews
-        ORDER BY "Review Date" DESC
-        LIMIT ?
-    """
-    
-    cursor.execute(query, (APP_REVIEW_LIMIT,))
-    
-    for review_id, title, text in cursor.fetchall():
-        # CRITICAL: Construct the full, verifiable ID (AS_[review_id])
-        full_verifiable_id = f"AS_{review_id}"
-        
-        # Combine Title and Text into a single body for the LLM
-        combined_text = f"{title.strip()}\n\n{text.strip()}"
-
-        flattened_reviews.append({
-            "id": full_verifiable_id,
-            "text": combined_text
-        })
-
-    print(f"✅ Extracted and flattened {len(flattened_reviews)} recent App Store reviews.")
+    cursor.execute('SELECT "Review ID", "Review Title", "Review Text" FROM economist_reviews ORDER BY "Review Date" DESC LIMIT ?', (APP_REVIEW_LIMIT,))
+    for rid, title, text in cursor.fetchall():
+        flattened_reviews.append({"id": f"AS_{rid}", "text": f"{title}\n\n{text}".strip()})
+    print(f"✅ Extracted {len(flattened_reviews)} App Store reviews.")
     return flattened_reviews
 
+def get_google_play_reviews(conn):
+    if not conn: return []
+    cursor = conn.cursor()
+    flattened_reviews = []
+    cursor.execute("SELECT review_id, review_text, score FROM google_play_reviews ORDER BY review_date DESC LIMIT ?", (GP_REVIEW_LIMIT,))
+    for rid, text, rating in cursor.fetchall():
+        flattened_reviews.append({"id": f"GP_{rid}", "text": f"Rating: {rating}/5\n\n{text}".strip()})
+    print(f"✅ Extracted {len(flattened_reviews)} Google Play reviews.")
+    return flattened_reviews
 
 def main():
-    """Main function to combine filtering and output JSON as a single flat list."""
-    
     print("--- Starting Final Curation Pipeline ---")
+    os.makedirs(DATA_DIR, exist_ok=True)
     
-    # 1. Connect to all databases
     reddit_conn = connect_db(REDDIT_DB)
     youtube_conn = connect_db(YOUTUBE_DB)
     app_store_conn = connect_db(APP_STORE_DB)
+    google_play_conn = connect_db(GOOGLE_PLAY_DB)
     
-    
-    if not reddit_conn and not youtube_conn and not app_store_conn:
-        print("❌ FATAL: No database files were found. Cannot proceed.")
+    if not any([reddit_conn, youtube_conn, app_store_conn, google_play_conn]):
+        print(f"❌ FATAL: No database files found in: {DATA_DIR}")
         sys.exit(1)
 
-    # 2. Get flattened data from all sources (lists of {id, text})
-    reddit_data = get_top_reddit_data(reddit_conn)
-    youtube_nuggets = get_top_youtube_data(youtube_conn)
-    app_store_reviews = get_app_store_reviews(app_store_conn)
+    all_data = (get_top_reddit_data(reddit_conn) + 
+                get_top_youtube_data(youtube_conn) + 
+                get_app_store_reviews(app_store_conn) + 
+                get_google_play_reviews(google_play_conn))
     
-    # 3. Combine all flattened lists into a single master list
-    all_data_for_llm = reddit_data + youtube_nuggets + app_store_reviews
+    with open(OUTPUT_FILENAME, 'w', encoding='utf-8') as f:
+        json.dump(all_data, f, indent=2)
     
-    total_items = len(all_data_for_llm)
-    print(f"\nTotal curated items ready for LLM: {total_items}")
-
-    # 4. Prepare the final JSON output string (now a list of objects)
-    json_output = json.dumps(all_data_for_llm, indent=2)
-
-    # 5. Write the JSON string to the file
-    try:
-        with open(OUTPUT_FILENAME, 'w', encoding='utf-8') as f:
-            f.write(json_output)
-        print(f"✅ Success! Data exported to JSON file: {OUTPUT_FILENAME}")
-    except Exception as e:
-        print(f"❌ Error writing JSON file: {e}")
-
-    # Clean up connections
-    if reddit_conn: reddit_conn.close()
-    if youtube_conn: youtube_conn.close()
-    if app_store_conn: app_store_conn.close()
-    print("\nDatabase connections closed. Pipeline finished.")
+    for c in [reddit_conn, youtube_conn, app_store_conn, google_play_conn]:
+        if c: c.close()
+    print(f"✅ Pipeline finished. Exported to {OUTPUT_FILENAME}")
 
 if __name__ == "__main__":
     main()
