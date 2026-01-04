@@ -39,7 +39,6 @@
         .insight-card.active .red-dot { transform: translateY(-50%) scale(1.3); }
         .freq-label { display: block; font-size: 0.7rem; color: #999; text-transform: uppercase; font-weight: 700; margin-top: 1.2rem; }
         
-        /* SIDEBAR CONSTRAINT: Makes citation list scrollable if it exceeds screen height */
         #sidebar-container { height: calc(100vh - var(--header-height)); padding: 2rem; opacity: 0; transform: translateX(20px); transition: all 0.3s ease; background: #FAFAFA; border-left: 1px solid #EEE; overflow: hidden; display: flex; flex-direction: column; }
         #sidebar-container.visible { opacity: 1; transform: translateX(0); }
         #sidebar-content { flex: 1; overflow-y: auto; padding-bottom: 2rem; scrollbar-width: thin; }
@@ -48,6 +47,45 @@
         
         .source-card { width: 100%; background: #FFF; border: 1px solid #DDD; padding: 1.2rem; border-radius: 8px; margin-bottom: 1.2rem; border-left: 4px solid var(--primary-red); box-shadow: 0 2px 8px rgba(0,0,0,0.04); overflow-wrap: anywhere; word-break: break-word; }
         .source-meta { display: flex; justify-content: space-between; font-size: 0.65rem; color: #999; margin-bottom: 0.8rem; text-transform: uppercase; font-weight: 700; }
+
+        /* --- MOBILE RESPONSIVE OVERRIDES --- */
+        @media (max-width: 1024px) {
+            :root { 
+                --header-height: 5.5rem; 
+                --text-block-width: 90%; 
+            }
+            #main-header { padding: 0 1rem; }
+            .header-title { font-size: 1.1rem; }
+            .header-stats { justify-content: flex-start; gap: 1rem; padding-bottom: 0.5rem; }
+            
+            #dashboard-container { 
+                grid-template-columns: 1fr; 
+                display: block; 
+            }
+            
+            .insight-card { padding-left: 2rem; margin-bottom: 25vh; }
+            .insight-text { font-size: 1.05rem; }
+            .red-dot { left: -0.5rem; }
+            
+            #sidebar-container {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                width: 100%;
+                height: 30vh;
+                z-index: 150;
+                border-left: none;
+                border-top: 1px solid #DDD;
+                padding: 1rem;
+                transform: translateY(20px);
+                box-shadow: 0 -10px 30px rgba(0,0,0,0.05);
+            }
+            #sidebar-container.visible { transform: translateY(0); }
+            
+            .source-card { padding: 0.8rem; margin-bottom: 0.8rem; }
+            #report-scroller { height: 70vh; }
+            .scroll-spacer { height: 35vh; }
+        }
     </style>
 </head>
 <body>
@@ -133,13 +171,12 @@
             sidebar.classList.remove('visible');
             setTimeout(() => {
                 content.innerHTML = citations.map(c => {
-                    // CONDITION: Use "FIND ORIGINAL" for app store sources
                     const isStore = c.source_platform === 'App Store' || c.source_platform === 'Google Play';
                     const linkText = isStore ? 'FIND ORIGINAL &rarr;' : 'SEE ORIGINAL &rarr;';
                     return `<div class="source-card"><div class="source-meta"><span>${c.source_platform} • ${c.date || 'Recent'}</span></div><div class="text-black italic leading-relaxed text-xs">"${c.comment_text}"</div><div class="mt-3"><a href="${c.comment_url}" target="_blank" class="text-xs text-red-600 font-bold hover:underline uppercase tracking-wide">${linkText}</a></div></div>`;
                 }).join('');
                 sidebar.classList.add('visible'); 
-                content.scrollTop = 0; // Reset scroll position for new sets
+                content.scrollTop = 0; 
             }, 100); 
         }
         document.addEventListener('DOMContentLoaded', loadReport);
