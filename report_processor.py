@@ -32,7 +32,6 @@ def fetch_citation_details(citation_id: str) -> Dict[str, Any]:
     if not conn: return {"id": citation_id, "comment_text": "DB missing", "comment_url": "#"}
     
     sql_query = ""
-    # Map raw DB ID extraction
     db_id_part = citation_id.split("_", 1)[1] if "_" in citation_id else citation_id
     
     if platform_key == "R":
@@ -51,13 +50,18 @@ def fetch_citation_details(citation_id: str) -> Dict[str, Any]:
             result = dict(row)
             raw_date = result.get('date')
             formatted_date = "Recent"
+            
             try:
-                # Unix timestamp conversion fix
-                if isinstance(raw_date, (int, float)) or (isinstance(raw_date, str) and raw_date.replace('.','',1).isdigit()):
-                    formatted_date = datetime.datetime.fromtimestamp(float(raw_date)).strftime('%Y-%m-%d')
+                # UPDATED: Robust Unix timestamp detection for Reddit/YT
+                clean_val = str(raw_date).strip()
+                # Check if it looks like a timestamp (numeric and significant length)
+                if clean_val.replace('.', '', 1).isdigit() and len(clean_val.split('.')[0]) >= 10:
+                    formatted_date = datetime.datetime.fromtimestamp(float(clean_val)).strftime('%Y-%m-%d')
                 else:
+                    # Fallback for standard ISO strings from App Stores
                     formatted_date = str(raw_date).split(' ')[0]
-            except: formatted_date = "Recent"
+            except:
+                formatted_date = "Recent"
             
             return {
                 "id": citation_id, 
@@ -68,7 +72,7 @@ def fetch_citation_details(citation_id: str) -> Dict[str, Any]:
             }
     except: pass
     finally: conn.close()
-    return {"id": citation_id, "comment_text": "Not found", "comment_url": "#"}
+    return {"id": citation_id, "comment_text": "Not found", "comment_url": "#", "source_platform": config['platform_name'], "date": "Recent"}
 
 def parse_report(raw_text):
     paragraphs = [p.strip() for p in raw_text.split('\n\n') if p.strip()]
@@ -79,12 +83,11 @@ def parse_report(raw_text):
         for match in citation_matches: ids.extend([cid.strip() for cid in match.split(',')])
         clean_text = re.sub(r"\[\[.*?\]\]", "", p).strip()
         
-        if ":" in clean_text[:25]:
-            topic_part, insight_part = clean_text.split(":", 1)
-            topic = topic_part.strip().upper()
-            insight = insight_part.strip()
-        else:
-            topic = "GENERAL"; insight = clean_text
+        topic = "GENERAL"; insight = clean_text
+        if ":" in clean_text[:30]:
+            parts = clean_text.split(":", 1)
+            topic = parts[0].strip().upper()
+            insight = parts[1].strip()
 
         parsed.append({
             "topic": topic,
