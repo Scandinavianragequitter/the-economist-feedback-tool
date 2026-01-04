@@ -5,9 +5,8 @@ import os
 from typing import List, Dict, Any, Optional
 
 # ==============================================================================
-# CONFIGURATION - UPDATED FOR RENDER PERSISTENT DISK
+# CONFIGURATION - RENDER PERSISTENT DISK PATHS
 # ==============================================================================
-# Use the Render mount path if available, otherwise fallback to local 'data'
 DATA_DIR = os.environ.get("PERSISTENT_STORAGE_PATH", "data")
 
 REDDIT_DB = os.path.join(DATA_DIR, "reddit_data.db")
@@ -21,8 +20,6 @@ YT_COMMENT_LIMIT = 200
 APP_REVIEW_LIMIT = 500      
 GP_REVIEW_LIMIT = 500 
 
-# --- Output Configuration ---
-# Ensure curated output is also saved to the persistent disk
 OUTPUT_FILENAME = os.path.join(DATA_DIR, "curated_data_for_llm.json") 
 # ==============================================================================
 
@@ -36,64 +33,77 @@ def connect_db(db_name: str) -> Optional[sqlite3.Connection]:
     except sqlite3.OperationalError:
         return None
 
-def get_top_reddit_data(conn: Optional[sqlite3.Connection]) -> List[Dict[str, str]]:
+def get_top_reddit_data(conn):
+    """Fetches top Reddit posts and their comments, including timestamps."""
     if not conn:
-        print(f"Skipping Reddit: '{REDDIT_DB}' not found.")
+        print(f"Skipping Reddit: DB not found.")
         return []
+
     cursor = conn.cursor()
     flattened_reddit_comments = []
-    cursor.execute("SELECT post_id FROM reddit_posts ORDER BY score DESC LIMIT ?", (REDDIT_POST_LIMIT,))
+
+    cursor.execute("""
+        SELECT post_id FROM reddit_posts
+        ORDER BY score DESC LIMIT ?
+    """, (REDDIT_POST_LIMIT,))
     top_post_ids = [p[0] for p in cursor.fetchall()]
-    if not top_post_ids: return []
+    
+    if not top_post_ids:
+        return []
+    
     placeholders = ','.join('?' for _ in top_post_ids)
-    cursor.execute(f"SELECT comment_id, post_id, body FROM reddit_comments WHERE post_id IN ({placeholders}) ORDER BY score DESC", tuple(top_post_ids))
-    for comment_id, post_id, body in cursor.fetchall():
-        flattened_reddit_comments.append({"id": f"R_{post_id}:{comment_id}", "text": body.strip()})
+    # CHANGE 1: Select created_utc column
+    cursor.execute(f"""
+        SELECT comment_id, post_id, body, created_utc
+        FROM reddit_comments
+        WHERE post_id IN ({placeholders})
+        ORDER BY score DESC
+    """, tuple(top_post_ids))
+    
+    for comment_id, post_id, body, created_utc in cursor.fetchall():
+        full_verifiable_id = f"R_{post_id}:{comment_id}"
+        flattened_reddit_comments.append({
+            "id": full_verifiable_id,
+            "text": body.strip(),
+            "date": created_utc # Pass date to intermediate JSON
+        })
+
     print(f"✅ Extracted {len(flattened_reddit_comments)} Reddit comments.")
     return flattened_reddit_comments
 
-def get_top_youtube_data(conn: Optional[sqlite3.Connection]) -> List[Dict[str, str]]:
-    if not conn:
-        print(f"Skipping YouTube: '{YOUTUBE_DB}' not found.")
-        return []
+def get_top_youtube_data(conn):
+    if not conn: return []
     cursor = conn.cursor()
     flattened_youtube_comments = []
     cursor.execute("SELECT text_display, comment_id FROM youtube_comments ORDER BY like_count DESC LIMIT ?", (YT_COMMENT_LIMIT,))
-    for body, comment_id in cursor.fetchall():
-        flattened_youtube_comments.append({"id": f"YT_{comment_id}", "text": body.strip()})
-    print(f"✅ Extracted {len(flattened_youtube_comments)} YouTube comments.")
+    for body, cid in cursor.fetchall():
+        flattened_youtube_comments.append({"id": f"YT_{cid}", "text": body.strip()})
+    print(f"✅ Extracted {len(flattened_youtube_comments)} Youtube comments.")
     return flattened_youtube_comments
 
-def get_app_store_reviews(conn: Optional[sqlite3.Connection]) -> List[Dict[str, str]]:
-    if not conn:
-        print(f"Skipping App Store: '{APP_STORE_DB}' not found.")
-        return []
+def get_app_store_reviews(conn):
+    if not conn: return []
     cursor = conn.cursor()
     flattened_reviews = []
     cursor.execute('SELECT "Review ID", "Review Title", "Review Text" FROM economist_reviews ORDER BY "Review Date" DESC LIMIT ?', (APP_REVIEW_LIMIT,))
-    for review_id, title, text in cursor.fetchall():
-        combined_text = f"{(title.strip() if title else '')}\n\n{(text.strip() if text else '')}".strip()
-        flattened_reviews.append({"id": f"AS_{review_id}", "text": combined_text})
+    for rid, title, text in cursor.fetchall():
+        flattened_reviews.append({"id": f"AS_{rid}", "text": f"{title}\n\n{text}".strip()})
     print(f"✅ Extracted {len(flattened_reviews)} App Store reviews.")
     return flattened_reviews
 
-def get_google_play_reviews(conn: Optional[sqlite3.Connection]) -> List[Dict[str, str]]:
-    if not conn:
-        print(f"Skipping Google Play: '{GOOGLE_PLAY_DB}' not found.")
-        return []
+def get_google_play_reviews(conn):
+    if not conn: return []
     cursor = conn.cursor()
     flattened_reviews = []
-    cursor.execute("SELECT review_id, review_text, rating FROM google_play_reviews ORDER BY review_date DESC LIMIT ?", (GP_REVIEW_LIMIT,))
-    for review_id, text, rating in cursor.fetchall():
+    cursor.execute("SELECT review_id, review_text, score FROM google_play_reviews ORDER BY review_date DESC LIMIT ?", (GP_REVIEW_LIMIT,))
+    for rid, text, rating in cursor.fetchall():
         combined_text = f"Rating: {rating}/5\n\n{(text.strip() if text else '')}".strip()
-        flattened_reviews.append({"id": f"GP_{review_id}", "text": combined_text})
+        flattened_reviews.append({"id": f"GP_{rid}", "text": combined_text})
     print(f"✅ Extracted {len(flattened_reviews)} Google Play reviews.")
     return flattened_reviews
 
 def main():
     print("--- Starting Final Curation Pipeline ---")
-    
-    # Ensure data directory exists
     os.makedirs(DATA_DIR, exist_ok=True)
     
     reddit_conn = connect_db(REDDIT_DB)
@@ -102,20 +112,20 @@ def main():
     google_play_conn = connect_db(GOOGLE_PLAY_DB)
     
     if not any([reddit_conn, youtube_conn, app_store_conn, google_play_conn]):
-        print(f"❌ FATAL: No database files were found in the storage folder: {DATA_DIR}")
+        print(f"❌ FATAL: No database files found in: {DATA_DIR}")
         sys.exit(1)
 
-    all_data_for_llm = (get_top_reddit_data(reddit_conn) + 
-                        get_top_youtube_data(youtube_conn) + 
-                        get_app_store_reviews(app_store_conn) + 
-                        get_google_play_reviews(google_play_conn))
+    all_data = (get_top_reddit_data(reddit_conn) + 
+                get_top_youtube_data(youtube_conn) + 
+                get_app_store_reviews(app_store_conn) + 
+                get_google_play_reviews(google_play_conn))
     
     with open(OUTPUT_FILENAME, 'w', encoding='utf-8') as f:
-        json.dump(all_data_for_llm, f, indent=2)
+        json.dump(all_data, f, indent=2)
     
-    print(f"✅ Exported {len(all_data_for_llm)} items to: {OUTPUT_FILENAME}")
     for c in [reddit_conn, youtube_conn, app_store_conn, google_play_conn]:
         if c: c.close()
+    print(f"✅ Pipeline finished. Exported to {OUTPUT_FILENAME}")
 
 if __name__ == "__main__":
     main()

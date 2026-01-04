@@ -24,15 +24,17 @@ def get_db_connection(db_path: str) -> Optional[sqlite3.Connection]:
 
 def fetch_citation_details(citation_id: str) -> Dict[str, Any]:
     prefix_match = re.match(r"(R|YT|AS|GP)_", citation_id)
-    if not prefix_match: return {"id": citation_id, "comment_text": "Not found", "comment_url": "#"}
+    if not prefix_match: 
+        return {"id": citation_id, "comment_text": "Not found", "comment_url": "#", "source_platform": "Unknown", "date": "Recent"}
     
     platform_key = prefix_match.group(1)
     config = DB_CONFIG.get(platform_key)
     conn = get_db_connection(config["db_path"])
-    if not conn: return {"id": citation_id, "comment_text": "DB missing", "comment_url": "#"}
+    
+    if not conn: 
+        return {"id": citation_id, "comment_text": "DB missing", "comment_url": "#", "source_platform": config['platform_name'], "date": "Recent"}
     
     sql_query = ""
-    # Map raw DB ID extraction
     db_id_part = citation_id.split("_", 1)[1] if "_" in citation_id else citation_id
     
     if platform_key == "R":
@@ -51,13 +53,16 @@ def fetch_citation_details(citation_id: str) -> Dict[str, Any]:
             result = dict(row)
             raw_date = result.get('date')
             formatted_date = "Recent"
+            
             try:
-                # Unix timestamp conversion fix
-                if isinstance(raw_date, (int, float)) or (isinstance(raw_date, str) and raw_date.replace('.','',1).isdigit()):
-                    formatted_date = datetime.datetime.fromtimestamp(float(raw_date)).strftime('%Y-%m-%d')
+                # CHANGE 2: Robust Unix timestamp check (handles decimals)
+                val_str = str(raw_date).strip()
+                if val_str and val_str.replace('.', '', 1).isdigit():
+                    formatted_date = datetime.datetime.fromtimestamp(float(val_str)).strftime('%Y-%m-%d')
                 else:
-                    formatted_date = str(raw_date).split(' ')[0]
-            except: formatted_date = "Recent"
+                    formatted_date = val_str.split(' ')[0] if val_str else "Recent"
+            except: 
+                formatted_date = "Recent"
             
             return {
                 "id": citation_id, 
@@ -67,8 +72,11 @@ def fetch_citation_details(citation_id: str) -> Dict[str, Any]:
                 "date": formatted_date
             }
     except: pass
-    finally: conn.close()
-    return {"id": citation_id, "comment_text": "Not found", "comment_url": "#"}
+    finally:
+        if conn: conn.close()
+    
+    # CHANGE 3: Expanded fallback dictionary keys
+    return {"id": citation_id, "comment_text": "Not found", "comment_url": "#", "source_platform": config['platform_name'], "date": "Recent"}
 
 def parse_report(raw_text):
     paragraphs = [p.strip() for p in raw_text.split('\n\n') if p.strip()]
