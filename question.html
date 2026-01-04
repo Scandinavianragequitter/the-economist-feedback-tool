@@ -82,7 +82,7 @@
             display: flex; align-items: center; justify-content: center;
             gap: 2rem;
             font-size: 0.85rem;
-            color: #FFFFFF; /* CHANGED: Reddit, YouTube, etc. titles now white */
+            color: #FFFFFF; /* Reddit, YouTube, etc. titles white */
         }
         .stat-val { color: var(--primary-red); font-weight: 700; margin-left: 0.25rem; }
         
@@ -129,7 +129,6 @@
             letter-spacing: 0.05em;
         }
 
-        /* Styling for the new navigation links in titles */
         .doc-section h2 a {
             color: inherit;
             text-decoration: none;
@@ -209,13 +208,13 @@
     <div id="content-wrapper">
         <div class="large-text-area">
             <div class="doc-section">
-                <h2><a href="final_design.html">Dashboard Overview ➚</a></h2>
+                <h2><a href="final_design.html">↗︎ Dashboard Overview</a></h2>
                 <p>
                     This dashboard shows last month's feedback on The Economist's offerings retrieved from reader's comments on Reddit, The Economist on Youtube and The Economist App on the iOS App Store and the Google Play Store. <br>AI automatically finds common critique and pain points as expressed in the data and aims to generate actionable insights for teams at The Economist to improve the publication. 
                 </p>
             </div>
             <div class="doc-section">
-                <h2><a href="comment_filter.html">Explorer ➚</a></h2>
+                <h2><a href="comment_filter.html">↗︎ Explorer</a></h2>
                 <p>
                     The Explorer uses Semantic Search (Natural Language) for you to find commentary according to custom categories.
                 </p>
@@ -246,8 +245,9 @@
                     const counts = await response.json();
                     document.getElementById('count-reddit').textContent = counts['Reddit'] || 0;
                     document.getElementById('count-youtube').textContent = counts['YouTube'] || 0;
-                    document.getElementById('count-ios').textContent = counts['AppStore'] || 0;
-                    document.getElementById('count-gp').textContent = counts['GooglePlay'] || 0;
+                    // Robust mapping for counts
+                    document.getElementById('count-ios').textContent = counts['iOS'] || counts['AppStore'] || counts['App Store'] || 0;
+                    document.getElementById('count-gp').textContent = counts['GP'] || counts['GooglePlay'] || counts['Google Play'] || 0;
                 }
             } catch (e) { 
                 console.warn("Error loading source counts:", e);

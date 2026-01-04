@@ -21,7 +21,9 @@
         .nav-icon-btn:hover { transform: scale(1.1); }
         .icon-svg { width: 28px; height: 28px; stroke: var(--primary-red); stroke-width: 2.5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
         .header-title { font-size: 1.5rem; font-weight: 700; color: var(--header-text); text-decoration: none; }
-        .header-stats { height: 40%; display: flex; align-items: center; justify-content: center; gap: 2rem; font-size: 0.85rem; color: #888; }
+        
+        /* Changed color to white */
+        .header-stats { height: 40%; display: flex; align-items: center; justify-content: center; gap: 2rem; font-size: 0.85rem; color: #FFFFFF; }
         .stat-val { color: var(--primary-red); font-weight: 700; margin-left: 0.25rem; }
 
         #content-wrapper { margin-top: var(--header-height); flex: 1; display: flex; flex-direction: column; align-items: center; padding: 3rem 2rem; overflow-y: auto; }
@@ -37,14 +39,10 @@
 
         #results-grid { width: 100%; max-width: 1200px; display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 2rem; padding-bottom: 5rem; }
         .result-card { background: #FFF; border: 1px solid #F3F4F6; border-left: 4px solid var(--primary-red); padding: 1.8rem; border-radius: 12px; position: relative; box-shadow: 0 4px 12px rgba(0,0,0,0.02); display: flex; flex-direction: column; justify-content: space-between; }
-        
-        /* ADJUSTED: Added padding-right to meta-row to avoid overlapping bookmark button */
         .meta-row { display: flex; justify-content: space-between; font-size: 0.7rem; font-weight: 800; color: #9CA3AF; text-transform: uppercase; margin-bottom: 1.2rem; padding-right: 2.5rem; }
-        
         .comment-body { font-style: italic; font-size: 1rem; line-height: 1.7; color: #374151; margin-bottom: 1.5rem; }
         .bookmark-btn { position: absolute; top: 1.5rem; right: 1rem; cursor: pointer; color: #E5E7EB; transition: color 0.2s; z-index: 10; }
         .bookmark-btn.active { color: var(--primary-red); }
-        
         .loader { border: 3px solid #f3f3f3; border-top: 3px solid var(--primary-red); border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
@@ -54,7 +52,7 @@
     <header id="main-header">
         <div class="header-top">
             <a href="question.html" class="nav-icon-btn"><svg class="icon-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></a>
-            <a href="final_design.html" class="header-title">Audience Feedback Explorer</a>
+            <a href="question.html" class="header-title">Audience Feedback Explorer</a>
             <div class="flex items-center gap-4">
                 <a href="final_design.html" class="nav-icon-btn"><svg class="icon-svg" viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"></line><line x1="4" y1="10" x2="20" y2="10"></line><line x1="4" y1="14" x2="20" y2="14"></line><line x1="4" y1="18" x2="20" y2="18"></line></svg></a>
                 <a href="saved_comments.html" class="nav-icon-btn"><svg class="icon-svg" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path></svg></a>
@@ -91,7 +89,6 @@
             if (!raw || raw === 'Recent') return 'Recent';
             if (!isNaN(raw)) {
                 let d = raw.toString().length === 10 ? raw * 1000 : raw;
-                // Defend against IDs being misidentified as timestamps (ID > 100 years from now)
                 if (d > 4102444800000) return 'Recent'; 
                 return new Date(parseInt(d)).toISOString().split('T')[0];
             }
@@ -168,6 +165,7 @@
                     const counts = await response.json();
                     document.getElementById('count-reddit').textContent = counts['Reddit'] || 0;
                     document.getElementById('count-youtube').textContent = counts['YouTube'] || 0;
+                    // Fix mapping for counts
                     document.getElementById('count-ios').textContent = counts['iOS'] || counts['AppStore'] || counts['App Store'] || 0;
                     document.getElementById('count-gp').textContent = counts['GP'] || counts['GooglePlay'] || counts['Google Play'] || 0;
                 }
