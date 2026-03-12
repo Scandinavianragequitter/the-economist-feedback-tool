@@ -12,7 +12,7 @@ try:
     from config.openrouter_config import OPENROUTER_API_URL, MODEL_NAME, HTTP_REFERER
 except ImportError:
     OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
-    MODEL_NAME = "tngtech/deepseek-r1t2-chimera:free"
+    MODEL_NAME = "xiaomi/mimo-v2-flash"
     HTTP_REFERER = "https://github.com/my-economist-report-app"
 
 INPUT_JSON_FILE = os.path.join(DATA_DIR, "curated_data_for_llm.json") 
